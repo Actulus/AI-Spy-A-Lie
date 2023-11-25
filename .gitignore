@@ -138,4 +138,4 @@ ENV/
 # Python flask
 instance/
 
-backend
+.venv
