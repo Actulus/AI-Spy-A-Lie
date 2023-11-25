@@ -128,3 +128,14 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Python and virtualenv
+*.pyc
+venv/
+env/
+ENV/
+
+# Python flask
+instance/
+
+backend
