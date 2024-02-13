@@ -5,7 +5,7 @@ from flask import jsonify
 from . import create_app # from __init__ file
 app = create_app(os.getenv("CONFIG_MODE"))
 
-@app.route('/', methods=['GET'])
+@app.route('/hello', methods=['GET'])
 def hello():
     return jsonify({'msg': 'Hello from Flask!'})
 
