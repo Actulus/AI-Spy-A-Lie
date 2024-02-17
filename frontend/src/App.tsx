@@ -8,7 +8,7 @@ import NotFoundPage from "./components/NotFound";
 function App() {
   return (
     <Router>
-      <div className="bg-gradient-to-b from-malachite to-dark-green min-h-screen min-w-screen">
+      <div className="bg-gradient-to-b from-malachite to-dark-green min-h-screen min-w-screen font-roboto">
         <Routes>
           <Route path="/" element={<WelcomePage />} />
           <Route path="/home" element={<HomePage />} />
