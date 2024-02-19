@@ -18,8 +18,8 @@ const WelcomePage: React.FC = () => {
             <div className='text-white flex flex-col items-center md:flex-row md:justify-between md:items-start'>
                 <img src="/logo.png" alt="AI Spy A Lie Logo" className='w-24 h-24 rounded-full md:float-left mt-5 drop-shadow-lg md:h-52 md:w-52 md:ml-8'/>
                 <div className='flex flex-col mt-5 md:mt-0 md:flex-row md:float-right md:mr-8 items-center'>
-                    <Button onClick={handleRegisterButtonClick} name='register-button'><p>Register</p></Button>
-                    <Button onClick={handleLoginButtonClick} name='login-button'><p>Login</p></Button>
+                    <Button onClick={handleRegisterButtonClick} name='register-button'>Register</Button>
+                    <Button onClick={handleLoginButtonClick} name='login-button'>Login</Button>
                 </div>
             </div>
             <div className='text-white text-center mt-14 mx-4 whitespace-break-spaces md:text-left md:mx-5 lg:ml-16'>
