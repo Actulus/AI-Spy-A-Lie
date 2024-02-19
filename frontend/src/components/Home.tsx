@@ -1,21 +1,32 @@
-import { useEffect, useState } from "react";
-const Home = () => {
-    const [message, setMessage] = useState<string>("")
+import React from 'react';
+import Button from './partials/Button';
 
-    useEffect (() => {
-        fetch("http://127.0.0.1:5000/hello")
-        .then((response) => response.json())
-        .then((data) => setMessage(data.msg))
+const HomePage: React.FC = () => {
+    const handlePlayButtonClick = () => {
+        console.log('Join a game button clicked');
     }
-    , []);
 
     return (
         <div>
-        <h1 className="text-4xl text-gray-500">Home</h1>
-        
-        {message && <h1 className="text-4xl text-gray-500">{message}</h1>}
+            <div className='flex flex-col md:flex-row'>
+                <div className='flex flex-col justify-evenly'>
+                    <div className='bg-spring-green rounded-lg font-keania-one w-full h-fit p-5 md:w-1/2 flex justify-between'>
+                        <div>
+                            <p className='text-pakistan-green'>Join a game</p>
+                            <p className='font-roboto text-dark-spring-green'>Play against bots or humans</p>
+                        </div>
+                        <Button onClick={handlePlayButtonClick} name='play-button'>Play now</Button>
+                    </div>
+                    <div className='bg-spring-green rounded-lg font-keania-one w-full h-fit p-5 md:w-1/2 flex justify-between'>
+
+                    </div>
+                    <div>Game Rules</div>
+                </div>
+                <div>Statistics</div>
+            </div>
+            <div>How to play</div>
         </div>
     )
 }
 
-export default Home;
+export default HomePage;
