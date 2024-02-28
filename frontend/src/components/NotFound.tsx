@@ -1,7 +1,9 @@
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import React from 'react';
 import { Link } from 'react-router-dom';
 
 const NotFoundPage: React.FC = () => {
+    const {isAuthenticated} = useKindeAuth();
 
     return (
         <div className=''>
@@ -21,9 +23,7 @@ const NotFoundPage: React.FC = () => {
             </div>
             <div className='xl:float-right flex flex-col justify-center gap-y-2 mr-5'>
                 <p className='text-white text-lg self-center'>or you can go back to the home page</p>
-                <Link to={"/home"} className='w-24 h-24 self-center'>
-                    <img src='/logo.png' alt='logo go to home page' className='rounded-full'/>
-                </Link>
+                {isAuthenticated ? <Link to='/home'><img src='/logo.png' alt='logo go to home page' className='rounded-full'/></Link> : <Link to='/'><img src='/logo.png' alt='logo go to home page' className='rounded-full'/></Link>}
             </div>
         </div>
     );
