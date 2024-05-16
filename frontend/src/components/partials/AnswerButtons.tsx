@@ -22,7 +22,7 @@ const AnswerButtons = ({ onClick }: AnswerButtonsProps) => {
     }
 
     return (
-        <div className="flex flex-col lg:flex-row justify-center items-center">
+        <div className="flex flex-col lg:flex-row justify-center items-center gap-2">
             <div className="flex flex-col items-center">
                 <p className="text-white text-2xl">Number</p>
                 <div className="flex flex-wrap outline outline-white rounded-lg">
@@ -36,7 +36,7 @@ const AnswerButtons = ({ onClick }: AnswerButtonsProps) => {
                     ))}
                 </div>
             </div>
-            <div className="flex flex-col items-center ml-2">
+            <div className="flex flex-col items-center">
                 <p className="text-white text-2xl">Face</p>
                 <div className="flex flex-wrap outline outline-white rounded-lg">
                     {diceFaces.map((face, index) => (
