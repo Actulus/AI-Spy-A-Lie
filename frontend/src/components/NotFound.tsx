@@ -23,7 +23,7 @@ const NotFoundPage: React.FC = () => {
             </div>
             <div className='xl:float-right flex flex-col justify-center gap-y-2 mr-5'>
                 <p className='text-white text-lg self-center'>or you can go back to the home page</p>
-                {isAuthenticated ? <Link to='/home'><img src='/logo.png' alt='logo go to home page' className='rounded-full'/></Link> : <Link to='/'><img src='/logo.png' alt='logo go to home page' className='rounded-full'/></Link>}
+                {isAuthenticated ? <Link to='/home'><img src='/logo.png' alt='logo go to home page' className='rounded-full w-24 h-24'/></Link> : <Link to='/'><img src='/logo.png' alt='logo go to home page' className='rounded-full w-24 h-24'/></Link>}
             </div>
         </div>
     );

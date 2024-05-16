@@ -2,9 +2,12 @@ import React from 'react';
 import Button from './partials/Button';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import StatisticsPlayer from './partials/StatisticsPlayer';
+import { useNavigate } from 'react-router-dom';
 
 const HomePage: React.FC = () => {
     const user = useKindeAuth().user;
+    // console.log(user?.picture)
+    const navigate = useNavigate();
 
     const TopPlayers = [
         { name: user?.family_name, score: 100, profile: user?.picture },
@@ -23,7 +26,7 @@ const HomePage: React.FC = () => {
     ]
 
     const handlePlayButtonClick = () => {
-        console.log('Join a game button clicked');
+        navigate('/play-game')
     }
 
     return (
