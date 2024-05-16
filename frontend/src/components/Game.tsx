@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 import { useParams } from "react-router-dom";
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import AnswerButton from "./partials/AnswerButtons";
+import RolledDiceFaces from "./partials/RolledDiceFaces";
 
 interface MessageProps {
   message: {
@@ -156,7 +157,8 @@ const GamePage: React.FC = () => {
           Send
         </button>
       </div> */}
-      <div>
+      <div className="flex flex-col mt-2 items-center lg:flex-row lg:justify-between gap-2">
+        <RolledDiceFaces rolledDice={[1, 2, 3, 4, 5]} />
         <AnswerButton onClick={(answer) => socket.current?.emit('chat', answer)} />
       </div>
     </div>
