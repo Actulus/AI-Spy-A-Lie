@@ -75,18 +75,9 @@ async def disconnect(sid):
 async def simulate_ai_connection(room):
     ai_sid = f'ai_{room}'
     rooms[room].add(ai_sid)
-    # Simulate a delay for the AI connection
-    await asyncio.sleep(1)
     logger.info(f'AI {ai_sid}: connected to {room}')
     await socketio_server.emit('join', {'sid': ai_sid}, room=room)
     await socketio_server.emit('chat', {'sid': ai_sid, 'message': 'Hello! I am the AI.'}, room=room)
-    await ai_connect(room, ai_sid)  # Ensure AI is added to the room
-
-async def ai_connect(room, ai_sid):
-    try:
-        await socketio_server.enter_room(ai_sid, '/', room)
-    except ValueError as e:
-        logger.error(f"Error connecting AI to room: {e}")
 
 def generate_ai_response(message):
     # Simple echo response for demonstration
