@@ -4,27 +4,19 @@ import Button from "./partials/Button";
 const PlayGamePage: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleEasyGameButtonClick = () => {
-    navigate("/easy-game");
-  };
-
-  const handleMediumGameButtonClick = () => {
-    navigate("/medium-game");
-  };
-
-  const handleHardGameButtonClick = () => {
-    navigate("/hard-game");
+  const handleGameButtonClick = (difficulty: string) => {
+    navigate(`/game/${difficulty}`);
   };
 
   return (
     <div>
-      <Button onClick={handleEasyGameButtonClick} name="play-button">
+      <Button onClick={() => handleGameButtonClick('easy')} name="play-button">
         Easy
       </Button>
-      <Button onClick={handleMediumGameButtonClick} name="play-button">
+      <Button onClick={() => handleGameButtonClick('medium')} name="play-button">
         Medium
       </Button>
-      <Button onClick={handleHardGameButtonClick} name="play-button">
+      <Button onClick={() => handleGameButtonClick('hard')} name="play-button">
         Hard
       </Button>
     </div>

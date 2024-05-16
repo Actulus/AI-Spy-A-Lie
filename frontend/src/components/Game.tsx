@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
+import { useParams } from "react-router-dom";
 
-// Define the types for the message
 interface MessageProps {
   message: {
     type: 'join' | 'chat';
@@ -10,7 +10,6 @@ interface MessageProps {
   };
 }
 
-// Message component with type annotations
 export const Message: React.FC<MessageProps> = ({ message }) => {
   if (message.type === 'join') return <p>{`${message.sid} just joined`}</p>;
   if (message.type === 'chat') return <p>{`${message.sid}: ${message.message}`}</p>;
@@ -18,6 +17,7 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
 };
 
 const GamePage: React.FC = () => {
+  const { difficulty } = useParams<{ difficulty: string }>();
   const socket = useRef<Socket>();
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -25,30 +25,33 @@ const GamePage: React.FC = () => {
   const [message, setMessage] = useState<string>('');
 
   useEffect(() => {
-    socket.current = io(import.meta.env.VITE_BACKEND_URL, {
+    const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
       path: import.meta.env.VITE_REACT_APP_SOCKET_PATH,
+      query: { room: difficulty },
     });
 
-    socket.current.on('connect', () => {
+    socketInstance.on('connect', () => {
       setIsConnected(true);
     });
 
-    socket.current.on('disconnect', () => {
+    socketInstance.on('disconnect', () => {
       setIsConnected(false);
     });
 
-    socket.current.on('join', (data: { sid: string }) => {
+    socketInstance.on('join', (data: { sid: string }) => {
       setMessages((prevMessages) => [...prevMessages, { ...data, type: 'join' }]);
     });
 
-    socket.current.on('chat', (data: { sid: string; message: string }) => {
+    socketInstance.on('chat', (data: { sid: string; message: string }) => {
       setMessages((prevMessages) => [...prevMessages, { ...data, type: 'chat' }]);
     });
+
+    socket.current = socketInstance;
 
     return () => {
       socket.current?.disconnect();
     };
-  }, []);
+  }, [difficulty]);
 
   return (
     <div className="p-4">
