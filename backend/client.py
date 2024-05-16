@@ -1,5 +1,5 @@
+# client for the ai player
 import asyncio
-
 import socketio
 
 socketio_client = socketio.AsyncClient()
