@@ -81,4 +81,4 @@ async def simulate_ai_connection(room):
 
 def generate_ai_response(message):
     # Simple echo response for demonstration
-    return f"AI says: {message}"
+    return f"{message}"
