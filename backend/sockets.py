@@ -1,7 +1,11 @@
 import socketio
-import subprocess
-import os
 import uuid
+import logging
+import asyncio
+
+# Initialize logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 socketio_server = socketio.AsyncServer(
     async_mode='asgi',
@@ -15,24 +19,27 @@ socketio_app = socketio.ASGIApp(
 
 rooms = {}  # Dictionary to keep track of rooms and their connections
 
+def generate_room_name(difficulty):
+    return f'{difficulty}_{uuid.uuid4()}'
+
 @socketio_server.event
 async def connect(sid, environ):
     query_params = environ.get('QUERY_STRING', '')
-    room = ''
     if query_params:
         params = dict(qc.split('=') for qc in query_params.split('&'))
         difficulty = params.get('room', 'default_room')
-        room = f'{difficulty}_{uuid.uuid4()}'
+        room = generate_room_name(difficulty)
     else:
-        room = f'default_room_{uuid.uuid4()}'
+        room = generate_room_name('default_room')
 
     rooms[room] = {sid}
 
     await socketio_server.enter_room(sid, room)
-    print(f'{sid}: connected to {room}')
+    logger.info(f'{sid}: connected to {room}')
     await socketio_server.emit('join', {'sid': sid}, room=room)
     
-    await connect_ai_to_room(room)
+    # Simulate AI connection
+    asyncio.create_task(simulate_ai_connection(room))
 
 @socketio_server.event
 async def chat(sid, message):
@@ -43,7 +50,13 @@ async def chat(sid, message):
             break
 
     if room:
+        logger.info(f'Message from {sid} in {room}: {message}')
         await socketio_server.emit('chat', {'sid': sid, 'message': message}, room=room)
+        # If the message is from the user, let the AI respond
+        if not sid.startswith('ai_'):
+            ai_sid = f'ai_{room}'
+            ai_message = generate_ai_response(message)
+            await socketio_server.emit('chat', {'sid': ai_sid, 'message': ai_message}, room=room)
 
 @socketio_server.event
 async def disconnect(sid):
@@ -57,15 +70,24 @@ async def disconnect(sid):
             break
 
     if room:
-        print(f'{sid}: disconnected from {room}')
+        logger.info(f'{sid}: disconnected from {room}')
 
-async def connect_ai_to_room(room):
+async def simulate_ai_connection(room):
     ai_sid = f'ai_{room}'
     rooms[room].add(ai_sid)
-    # Correctly register the AI room in the manager
-    socketio_server.manager.enter_room(ai_sid, '/', room)
+    # Simulate a delay for the AI connection
+    await asyncio.sleep(1)
+    logger.info(f'AI {ai_sid}: connected to {room}')
     await socketio_server.emit('join', {'sid': ai_sid}, room=room)
     await socketio_server.emit('chat', {'sid': ai_sid, 'message': 'Hello! I am the AI.'}, room=room)
-    
-    # Call the AI client
-    subprocess.Popen([os.sys.executable, 'client.py', room])
+    await ai_connect(room, ai_sid)  # Ensure AI is added to the room
+
+async def ai_connect(room, ai_sid):
+    try:
+        await socketio_server.enter_room(ai_sid, '/', room)
+    except ValueError as e:
+        logger.error(f"Error connecting AI to room: {e}")
+
+def generate_ai_response(message):
+    # Simple echo response for demonstration
+    return f"AI says: {message}"

@@ -9,7 +9,9 @@ const PlayGamePage: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="flex flex-col">
+      <h1 className="text-2xl font-bold self-center text-white m-2">Choose difficulty:</h1>
+    <div className="flex justify-center">
       <Button onClick={() => handleGameButtonClick('easy')} name="play-button">
         Easy
       </Button>
@@ -19,6 +21,7 @@ const PlayGamePage: React.FC = () => {
       <Button onClick={() => handleGameButtonClick('hard')} name="play-button">
         Hard
       </Button>
+    </div>
     </div>
   );
 };
