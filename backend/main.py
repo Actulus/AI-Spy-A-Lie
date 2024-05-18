@@ -6,7 +6,7 @@ from fastapi.openapi.utils import get_openapi
 from dotenv import load_dotenv
 import os
 from sockets import socketio_app
-
+from endpoints import router as highscore_router
 # Load environment variables from .env file
 load_dotenv()
 
@@ -42,6 +42,7 @@ app.openapi = custom_openapi
 
 
 app.mount('/sockets', app=socketio_app)
+app.include_router(highscore_router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
