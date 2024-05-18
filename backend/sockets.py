@@ -14,7 +14,7 @@ socketio_server = socketio.AsyncServer(
 
 socketio_app = socketio.ASGIApp(
     socketio_server=socketio_server,
-    socketio_path='sockets'
+    socketio_path='/'
 )
 
 rooms = {}  # Dictionary to keep track of rooms and their connections
