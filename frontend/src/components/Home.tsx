@@ -1,30 +1,34 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import Button from './partials/Button';
-import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import StatisticsPlayer from './partials/StatisticsPlayer';
 import { useNavigate } from 'react-router-dom';
+import { HighscoreResponse, Player } from '../../types';
 
 const HomePage: React.FC = () => {
-    const user = useKindeAuth().user;
-    // console.log(user?.picture)
+    const [TopPlayers, setTopPlayers] = useState<Player[]>([]);
     const navigate = useNavigate();
 
-    const TopPlayers = [
-        { name: user?.family_name, score: 100, profile: user?.picture },
-        { name: 'Player 2', score: 90, profile: '' },
-        { name: 'Player 3', score: 80, profile: '' },
-        { name: 'Player 4', score: 70, profile: '' },
-        { name: 'Player 5', score: 60, profile: '' },
-        { name: 'Player 6', score: 50, profile: '' },
-        { name: 'Player 7', score: 40, profile: '' },
-        { name: user?.family_name, score: 30, profile: user?.picture },
-        { name: 'Player 4', score: 70, profile: '' },
-        { name: 'Player 5', score: 60, profile: '' },
-        { name: 'Player 6', score: 50, profile: '' },
-        { name: 'Player 7', score: 40, profile: '' },
-        { name: user?.family_name, score: 30, profile: user?.picture },
-    ]
-
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then((data: HighscoreResponse[]) => {
+            const players = data.map((player: HighscoreResponse) => ({
+                name: player.user_name,
+                score: player.user_score,
+                profile: player.profile_picture,
+            }));
+            setTopPlayers(players);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }, []);    
+    
     const handlePlayButtonClick = () => {
         navigate('/play-game')
     }
@@ -68,7 +72,7 @@ const HomePage: React.FC = () => {
                     </ul>
                 </div>
             </div>
-            <div className='bg-spring-green rounded-lg font-keania-one w-full h-full p-5 flex flex-col justify-between col-start-1 md:col-start-2 md:row-start-1'>
+            <div className='bg-spring-green rounded-lg font-keania-one w-full h-full p-5 flex flex-col justify-start col-start-1 md:col-start-2 md:row-start-1'>
                 <p className='text-pakistan-green text-shadow-sm shadow-dark-spring-green'>Statistics</p>
                 <ul className='flex flex-col gap-3 mt-2'>
                     {TopPlayers.slice(0, 10).map((player, index) => (
