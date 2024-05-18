@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useParams } from "react-router-dom";
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
@@ -22,17 +22,11 @@ interface SIDMapProps {
   }[];
 }
 
+const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
 export const Message: React.FC<MessageProps & SIDMapProps> = ({ message, sidMaps }) => {
-  const getDisplayName = (sid: string) => {
-    const map = sidMaps.find(map => map.sid === sid);
-    return map ? map.name : sid;
-  };
-
-  const getDisplayPic = (sid: string) => {
-    const map = sidMaps.find(map => map.sid === sid);
-    return map ? map.pic : sid;
-  }
-
+  const getDisplayName = (sid: string) => sidMaps.find(map => map.sid === sid)?.name || sid;
+  const getDisplayPic = (sid: string) => sidMaps.find(map => map.sid === sid)?.pic || sid;  
   const isAI = sidMaps.some(map => map.sid === message.sid && map.isAI);
 
   if (message.type === 'join') return <p className="text-center text-dark-spring-green">{`${getDisplayName(message.sid)} just joined`}</p>;
@@ -59,17 +53,22 @@ const GamePage: React.FC = () => {
   const socket = useRef<Socket>();
   const { user } = useKindeAuth();
 
+  const userName = `${user?.given_name} ${user?.family_name}`;
+  const aiName = `${difficulty?.charAt(0).toUpperCase() + difficulty!.slice(1)}AI`;
+  const userPic = user?.picture || "/cat_pfp.png";
+  const aiPic = '/AI_Pic.png';
+
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [messages, setMessages] = useState<Array<{ type: 'join' | 'chat'; sid: string; message?: string }>>([]);
   const [sidMaps, setSidMaps] = useState<{ name: string; pic: string; sid: string; isAI: boolean }[]>([]);
-  // const [message, setMessage] = useState<string>('');
 
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
-  const userName = `${user?.given_name} ${user?.family_name}`;
-  const aiName = `${difficulty?.charAt(0).toUpperCase() + difficulty!.slice(1)}AI`;
-  const userPic = user?.picture || "/cat_pfp.png"
-  const aiPic = '/AI_Pic.png';
+  const rollDices = useCallback((diceNumbers: number): string[] => {
+    return Array.from({ length: diceNumbers }, () => diceFaces[Math.floor(Math.random() * 6)]);
+  }, []);
+
+  
 
   useEffect(() => {
     const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
@@ -121,45 +120,14 @@ const GamePage: React.FC = () => {
         ))}
         <div ref={endOfMessagesRef}></div>
       </div>
-      {/* <div className="flex">
-        <input
-          type="text"
-          id="message"
-          className="border p-1 mt-2 mr-2 rounded-lg w-full"
-          onChange={(event) => {
-            const value = event.target.value.trim();
-            setMessage(value);
-          }}
-          // on enter key 
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              if (message && message.length) {
-                socket.current?.emit('chat', message);
-              }
-              const messageBox = document.getElementById('message') as HTMLInputElement;
-              messageBox.value = '';
-              setMessage('');
-            }
-          }
-          }
-        />
-        <button
-          className="bg-spring-green font-bold rounded-lg text-white p-2 mt-2"
-          onClick={() => {
-            if (message && message.length) {
-              socket.current?.emit('chat', message);
-            }
-            const messageBox = document.getElementById('message') as HTMLInputElement;
-            messageBox.value = '';
-            setMessage('');
-          }}
-        >
-          Send
-        </button>
-      </div> */}
       <div className="flex flex-col mt-2 items-center lg:flex-row lg:justify-between gap-2">
-        <RolledDiceFaces rolledDice={[1, 2, 3, 4, 5]} />
-        <AnswerButton onClick={(answer) => socket.current?.emit('chat', answer)} />
+        <RolledDiceFaces rolledDice={rollDices(5)} />
+        <AnswerButton
+          currentBid={null}
+          previousBid={null}
+          calledLiar={{status: false, caller: ''}}
+          onClick={(answer) => socket.current?.emit('chat', answer)}
+        />
       </div>
     </div>
   );

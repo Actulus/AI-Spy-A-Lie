@@ -1,4 +1,4 @@
-const RolledDiceFaces = ({ rolledDice }: { rolledDice: number[] }) => {
+const RolledDiceFaces = ({ rolledDice }: { rolledDice: string[] }) => {
     return (
         <div className="flex flex-col items-center">
             <p className="text-white text-2xl">Your Dices</p>
