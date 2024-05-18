@@ -25,7 +25,21 @@ if config_mode == 'development':
 # Initialize FastAPI app
 app = FastAPI(openapi_url=open_api_url)
 
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="AI-Spy-A-Lie API",
+        version="1.0.0",
+        description="API for AI-Spy-A-Lie game",
+        routes=app.routes,
+    )
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
 # Set custom OpenAPI schema
+app.openapi = custom_openapi
+
 
 app.mount('/sockets', app=socketio_app)
 
