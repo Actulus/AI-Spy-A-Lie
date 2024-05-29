@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useParams } from "react-router-dom";
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
-import AnswerButton from "./partials/AnswerButtons";
 import RolledDiceFaces from "./partials/RolledDiceFaces";
+import AnswerButtons from "./partials/AnswerButtons";
 
 interface MessageProps {
   message: {
@@ -22,11 +22,19 @@ interface SIDMapProps {
   }[];
 }
 
+interface GameState {
+  dice_count: { [key: number]: number };
+  players: { [key: number]: number[] };
+  current_bid: [number, number];
+  current_player: number;
+  last_action_was_challenge: boolean;
+}
+
 const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
 export const Message: React.FC<MessageProps & SIDMapProps> = ({ message, sidMaps }) => {
   const getDisplayName = (sid: string) => sidMaps.find(map => map.sid === sid)?.name || sid;
-  const getDisplayPic = (sid: string) => sidMaps.find(map => map.sid === sid)?.pic || sid;  
+  const getDisplayPic = (sid: string) => sidMaps.find(map => map.sid === sid)?.pic || sid;
   const isAI = sidMaps.some(map => map.sid === message.sid && map.isAI);
 
   if (message.type === 'join') return <p className="text-center text-dark-spring-green">{`${getDisplayName(message.sid)} just joined`}</p>;
@@ -61,14 +69,10 @@ const GamePage: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [messages, setMessages] = useState<Array<{ type: 'join' | 'chat'; sid: string; message?: string }>>([]);
   const [sidMaps, setSidMaps] = useState<{ name: string; pic: string; sid: string; isAI: boolean }[]>([]);
+  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [isFirstBid, setIsFirstBid] = useState<boolean>(true);
 
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
-
-  const rollDices = useCallback((diceNumbers: number): string[] => {
-    return Array.from({ length: diceNumbers }, () => diceFaces[Math.floor(Math.random() * 6)]);
-  }, []);
-
-  
 
   useEffect(() => {
     const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
@@ -98,6 +102,10 @@ const GamePage: React.FC = () => {
       setMessages(prevMessages => [...prevMessages, { ...data, type: 'chat' }]);
     });
 
+    socketInstance.on('game_update', (data: GameState) => {
+      setGameState(data);
+    });
+
     socket.current = socketInstance;
 
     return () => {
@@ -111,6 +119,25 @@ const GamePage: React.FC = () => {
     }
   }, [messages]);
 
+  const handleUserAction = (action: { type: string, quantity?: number, faceValue?: number }) => {
+    if (socket.current) {
+      if (action.type === 'bid' && action.quantity !== undefined && action.faceValue !== undefined) {
+        const message = `bid ${action.quantity} ${action.faceValue}`;
+        socket.current.emit('chat', message);
+      } else if (action.type === 'challenge') {
+        socket.current.emit('chat', 'challenge');
+      }
+    }
+    setIsFirstBid(false);
+  };
+
+  // Helper function to convert bid tuple to the expected format
+  const convertBid = (bid: [number, number] | null) => {
+    if (!bid) return null;
+    return { number: bid[0], face: bid[1] !== 0 ? diceFaces[bid[1] - 1] : '⚀' }; // Convert face value to emoji
+  };
+
+
   return (
     <div className="flex flex-col p-4">
       <h2 className="text-lg font-bold bg-spring-green w-fit p-2 rounded-lg">Connection status: {isConnected ? 'connected' : 'disconnected'}</h2>
@@ -121,12 +148,17 @@ const GamePage: React.FC = () => {
         <div ref={endOfMessagesRef}></div>
       </div>
       <div className="flex flex-col mt-2 items-center lg:flex-row lg:justify-between gap-2">
-        <RolledDiceFaces rolledDice={rollDices(5)} />
-        <AnswerButton
-          currentBid={null}
-          previousBid={null}
-          calledLiar={{status: false, caller: ''}}
-          onClick={(answer) => socket.current?.emit('chat', answer)}
+        <RolledDiceFaces user="Your" rolledDice={gameState ? gameState.players[1].map(die => diceFaces[die - 1]) : []} />
+        {gameState && gameState.last_action_was_challenge && (
+          <div className="mt-4">
+            <RolledDiceFaces user="Opponent's" rolledDice={gameState.players[2].map(die => diceFaces[die - 1])} />
+          </div>
+        )}
+        <AnswerButtons
+          currentBid={convertBid(gameState?.current_bid || null )}
+          previousBid={isFirstBid ? null : convertBid(gameState?.current_bid || null)} 
+          calledLiar={{ status: false, caller: '' }}
+          onClick={handleUserAction}
         />
       </div>
     </div>

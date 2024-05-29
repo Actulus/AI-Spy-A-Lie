@@ -1,46 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface AnswerButtonsProps {
-    onClick: (answer: string) => void;
+    onClick: (action: { type: string, quantity?: number, faceValue?: number }) => void;
     currentBid: { number: number, face: string } | null;
-    previousBid: { number: number, face: string } | null;
-    calledLiar: {status: boolean, caller: string};
-    
+    previousBid: { number: number, face: string | undefined } | null;
+    calledLiar: { status: boolean, caller: string };
+
 }
 
 const AnswerButtons = ({ onClick, currentBid, previousBid, calledLiar }: AnswerButtonsProps) => {
     const diceNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    const diceFaces = useMemo(() => ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'], []);
     const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
     const [selectedFace, setSelectedFace] = useState<string | null>(null);
 
     useEffect(() => {
-        setSelectedNumber(null);
-        setSelectedFace(null);
-    }, [previousBid]);
+        console.log('previousBid', previousBid);
+        if (previousBid === null) {
+            setSelectedNumber(1);
+            setSelectedFace(diceFaces[0]);
+        } else {
+            if (currentBid) {
+                setSelectedNumber(currentBid.number);
+                const currentFaceIndex = diceFaces.indexOf(currentBid.face);
+                if (currentFaceIndex === diceFaces.length - 1) {
+                    setSelectedFace(diceFaces[0]);
+                } else {
+                    setSelectedFace(diceFaces[currentFaceIndex + 1]);
+                }
+            }
+        }
+    }, [currentBid, previousBid, diceFaces]);
 
     const disableNumber = (number: number) => {
-        if (!previousBid) return false;
-        return number < previousBid.number;
+        if (!previousBid || previousBid.number === 0) return false; // Allow any number if no previous bid or first bid
+        return number <= previousBid.number; // Disable if the number is less than or equal to the previous bid's number
     };
 
     const disableFace = (face: string) => {
-        if (!selectedNumber) return true;
-        if (selectedNumber > (previousBid?.number || 0)) return false;
-        if (previousBid && selectedNumber === previousBid.number) {
-            return diceFaces.indexOf(face) <= diceFaces.indexOf(previousBid.face);
+        if (!selectedNumber) return true; // Disable if no number is selected
+        if (!previousBid || previousBid.face === undefined) return false; // Allow any face if no previous bid or first bid
+
+        const selectedFaceIndex = diceFaces.indexOf(face);
+        const previousFaceIndex = diceFaces.indexOf(previousBid.face);
+
+        if (selectedNumber > previousBid.number) return false; // Allow if the number is greater than the previous bid's number
+        if (selectedNumber === previousBid.number) {
+            return selectedFaceIndex <= previousFaceIndex; // Disable if the face is less than or equal to the previous bid's face
         }
         return false;
     };
 
     const handleBidSubmit = () => {
         if (selectedNumber && selectedFace) {
-            onClick(`Number of dice: ${selectedNumber}, Dice face: ${selectedFace}`);
+            const faceValue = diceFaces.indexOf(selectedFace) + 1;  // Convert emoji to numeric value
+            onClick({ type: 'bid', quantity: selectedNumber, faceValue });
         }
     };
 
     const handleCallLiarSubmit = () => {
-        onClick('Call Liar');
+        onClick({ type: 'challenge' });
     };
 
     return (
@@ -83,7 +102,7 @@ const AnswerButtons = ({ onClick, currentBid, previousBid, calledLiar }: AnswerB
                 <button
                     onClick={handleCallLiarSubmit}
                     disabled={calledLiar.status}
-                    className={`p-2 bg-carmine ${calledLiar ? 'opacity-50 cursor-not-allowed' : 'hover:bg-dark-red'} text-white font-bold rounded-lg`}>
+                    className={`p-2 bg-carmine ${calledLiar.status ? 'opacity-50 cursor-not-allowed' : 'hover:bg-dark-red'} text-white font-bold rounded-lg`}>
                     Call Liar
                 </button>
             </div>
