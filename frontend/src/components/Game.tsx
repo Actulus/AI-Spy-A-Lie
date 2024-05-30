@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import RolledDiceFaces from "./partials/RolledDiceFaces";
 import AnswerButtons from "./partials/AnswerButtons";
+import GameOverModal from "./partials/GameOverModal";
 
 interface MessageProps {
   message: {
@@ -73,6 +74,9 @@ const GamePage: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isFirstBid, setIsFirstBid] = useState<boolean>(true);
 
+  const [isGameOver, setIsGameOver] = useState<boolean>(false);
+  const [winner, setWinner] = useState<string | null>(null);
+
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -108,6 +112,11 @@ const GamePage: React.FC = () => {
       setGameState(data);
     });
 
+    socketInstance.on('game_over', (data: { winner: string }) => {
+      setIsGameOver(true);
+      setWinner(data.winner);
+    });
+
     socket.current = socketInstance;
 
     return () => {
@@ -139,6 +148,25 @@ const GamePage: React.FC = () => {
     return { number: bid[0], face: bid[1] !== 0 ? diceFaces[bid[1] - 1] : '⚀' }; // Convert face value to emoji
   };
 
+  const handlePlayAgain = () => {
+    // Reset game state and other variables
+    setIsGameOver(false);
+    setGameState(null);
+    setIsFirstBid(true);
+    setMessages([]);
+    setSidMaps([]);
+    // Reconnect to start a new game
+    if (socket.current) {
+      socket.current.connect();
+    }
+    window.location.reload();
+  };
+
+  const handleGoHome = () => {
+    // Redirect to home page
+    window.location.href = '/home';
+  };
+
 
   return (
     <div className="flex flex-col p-4">
@@ -158,6 +186,13 @@ const GamePage: React.FC = () => {
           onClick={handleUserAction}
         />
       </div>
+      {isGameOver && (
+        <GameOverModal
+          winner={winner ?? ""}
+          onPlayAgain={handlePlayAgain}
+          onGoHome={handleGoHome}
+        />
+      )}
     </div>
   );
 };

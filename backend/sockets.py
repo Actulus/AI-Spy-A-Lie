@@ -109,25 +109,30 @@ async def chat(sid, message):
             if user_message:
                 await socketio_server.emit('chat', {'sid': sid, 'message': user_message}, room=sid)
                 if message == "challenge":
-                    await asyncio.sleep(0.3)
+                    await asyncio.sleep(0.5)
                     await socketio_server.emit('chat', {'sid': sid, 'message': response_message}, room=room)
 
+            
             # Send game state update to all users
             game_state = game.get_game_state()
             await socketio_server.emit('game_update', game_state, room=room)
 
             # AI response based on the game state
-            ai_sid = f'ai_{room}'
             if game.is_game_over():
                 winner = game.get_winner()
-                await socketio_server.emit('chat', {'sid': ai_sid, 'message': f"Game over! Player {winner} wins!"}, room=room)
+                await socketio_server.emit('game_over', {'winner': game.player_names[winner]}, room=room)
             else:
-                await asyncio.sleep(0.5)  # Adding delay before AI response
-                ai_message = generate_ai_response(game, room)
-                await socketio_server.emit('chat', {'sid': ai_sid, 'message': ai_message}, room=room)
-                # Send updated game state after AI move
-                game_state = game.get_game_state()
-                await socketio_server.emit('game_update', game_state, room=room)
+                ai_sid = f'ai_{room}'
+                if game.is_game_over():
+                    winner = game.get_winner()
+                    await socketio_server.emit('chat', {'sid': ai_sid, 'message': f"Game over! Player {winner} wins!"}, room=room)
+                else:
+                    await asyncio.sleep(0.5)  # Adding delay before AI response
+                    ai_message = generate_ai_response(game, room)
+                    await socketio_server.emit('chat', {'sid': ai_sid, 'message': ai_message}, room=room)
+                    # Send updated game state after AI move
+                    game_state = game.get_game_state()
+                    await socketio_server.emit('game_update', game_state, room=room)
 
 @socketio_server.event
 async def disconnect(sid):
@@ -152,10 +157,18 @@ async def simulate_ai_connection(room):
     await socketio_server.emit('chat', {'sid': ai_sid, 'message': 'Hi there!'}, room=room)
 
 def generate_ai_response(game, room):
+    if game.is_game_over():
+        winner = game.get_winner()
+        return f"Game over! {game.player_names[winner]} wins!"
+    
     if game.last_action_was_challenge or game.current_bid == (1, 1):
         action = 'bid'  # Force bid after challenge or for the first move
     else:
         action = random.choice(['bid', 'challenge'])
+
+    # if current bid is 10 6s, challenge
+    if game.current_bid[0] == 10:
+        action = 'challenge'
 
     if action == 'bid':
         quantity, face_value = game.random_bid()

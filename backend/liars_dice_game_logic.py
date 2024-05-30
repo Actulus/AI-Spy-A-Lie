@@ -25,6 +25,9 @@ class LiarDiceGame:
         # total_dice = sum(self.dice_count.values())
         if face_value not in range(1, 7):
             return False
+        
+        if quantity > 10 or quantity < 1:
+            return False
 
         # The initial bid of (1, 1) should be valid and subsequent bids should be higher
         if self.current_bid == (1, 1):
@@ -43,7 +46,10 @@ class LiarDiceGame:
 
     def challenge(self, challenger):
         players_dice = self.reveal_dice()
-        total_quantity = sum(dice.count(self.current_bid[1]) + dice.count(1) for dice in players_dice.values())
+        if self.current_bid[1] == 1:
+            total_quantity = sum(dice.count(1) for dice in players_dice.values())
+        else:
+            total_quantity = sum(dice.count(self.current_bid[1]) + dice.count(1) for dice in players_dice.values())
         result = None
         dice_faces = {player: " ".join(str(die) for die in dice) for player, dice in players_dice.items()}
         if total_quantity >= self.current_bid[0]:
@@ -76,8 +82,13 @@ class LiarDiceGame:
         return None
 
     def random_bid(self):
-        total_dice = sum(self.dice_count.values())
-        quantity = random.randint(self.current_bid[0] + 1, total_dice)
+        total_dice = 10
+        
+        min_quantity = self.current_bid[0] + 1
+        if min_quantity > total_dice:
+            min_quantity = total_dice
+
+        quantity = random.randint(min_quantity, total_dice)
         face_value = random.randint(1, 6)
         return quantity, face_value
 
