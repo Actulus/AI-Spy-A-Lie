@@ -28,6 +28,7 @@ interface GameState {
   current_bid: [number, number];
   current_player: number;
   last_action_was_challenge: boolean;
+  player_names: { [key: number]: string };
 }
 
 const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -47,7 +48,7 @@ export const Message: React.FC<MessageProps & SIDMapProps> = ({ message, sidMaps
         {isAI ? <img src={getDisplayPic(message.sid)} alt="user" className={`w-8 h-8 mx-1 rounded-full`} /> : null}
         <div className={`my-2 p-2 rounded-lg w-40 md:w-64 ${messageClass}`}>
           <p className={`text-xs ${isAI ? 'text-start' : 'text-end'}`}>{`${getDisplayName(message.sid)}`}</p>
-          <p className={`${isAI ? 'text-start' : 'text-end'}`}>{`${message.message}`}</p>
+          <p className={`${isAI ? 'text-start' : 'text-end'}`} style={{ whiteSpace: 'pre-line' }}>{`${message.message}`}</p>
         </div>
         {isAI ? null : <img src={getDisplayPic(message.sid)} alt="user" className={`w-8 h-8 mx-1 rounded-full`} />}
       </div>
@@ -83,6 +84,7 @@ const GamePage: React.FC = () => {
     socketInstance.on('connect', () => {
       setIsConnected(true);
       setSidMaps(prevMaps => [...prevMaps, { name: userName, pic: userPic as string, sid: socketInstance.id as string, isAI: false }]);
+      socketInstance.emit('player_names', { userName, aiName })
     });
 
     socketInstance.on('disconnect', () => {
@@ -149,15 +151,10 @@ const GamePage: React.FC = () => {
       </div>
       <div className="flex flex-col mt-2 items-center lg:flex-row lg:justify-between gap-2">
         <RolledDiceFaces user="Your" rolledDice={gameState ? gameState.players[1].map(die => diceFaces[die - 1]) : []} />
-        {gameState && gameState.last_action_was_challenge && (
-          <div className="mt-4">
-            <RolledDiceFaces user="Opponent's" rolledDice={gameState.players[2].map(die => diceFaces[die - 1])} />
-          </div>
-        )}
         <AnswerButtons
           currentBid={convertBid(gameState?.current_bid || null )}
           previousBid={isFirstBid ? null : convertBid(gameState?.current_bid || null)} 
-          calledLiar={{ status: false, caller: '' }}
+          calledLiar={{ status: gameState?.last_action_was_challenge || false, caller: '' }}
           onClick={handleUserAction}
         />
       </div>

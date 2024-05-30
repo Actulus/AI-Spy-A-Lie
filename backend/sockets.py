@@ -50,6 +50,23 @@ async def connect(sid, environ):
     asyncio.create_task(simulate_ai_connection(room))
 
 @socketio_server.event
+async def player_names(sid, data):
+    room = None
+    for r, sids in rooms.items():
+        if sid in sids:
+            room = r
+            break
+    
+    if room:
+        user_name = data['userName']
+        ai_name = data['aiName']
+        games[room].set_player_names(user_name, ai_name)
+        logger.info(f'Player names received in {room}: {user_name}, {ai_name}')
+        # Update game state with player names
+        game_state = games[room].get_game_state()
+        await socketio_server.emit('game_update', game_state, room=room)
+
+@socketio_server.event
 async def chat(sid, message):
     room = None
     for r, sids in rooms.items():
@@ -92,7 +109,7 @@ async def chat(sid, message):
             if user_message:
                 await socketio_server.emit('chat', {'sid': sid, 'message': user_message}, room=sid)
                 if message == "challenge":
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.3)
                     await socketio_server.emit('chat', {'sid': sid, 'message': response_message}, room=room)
 
             # Send game state update to all users

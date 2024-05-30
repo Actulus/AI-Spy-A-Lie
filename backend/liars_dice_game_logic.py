@@ -8,6 +8,11 @@ class LiarDiceGame:
         self.current_bid = (1, 1)  # Minimum bid to start each round
         self.current_player = 1
         self.last_action_was_challenge = False
+        self.player_names = {1: 'Player 1', 2: 'Player 2'} # default player names
+
+    def set_player_names(self, player1_name, player2_name):
+        self.player_names[1] = player1_name
+        self.player_names[2] = player2_name
 
     def roll_dice(self):
         for player in self.players:
@@ -17,8 +22,8 @@ class LiarDiceGame:
         return self.players
 
     def make_bid(self, player, quantity, face_value):
-        total_dice = sum(self.dice_count.values())
-        if quantity > total_dice or face_value not in range(1, 7):
+        # total_dice = sum(self.dice_count.values())
+        if face_value not in range(1, 7):
             return False
 
         # The initial bid of (1, 1) should be valid and subsequent bids should be higher
@@ -38,15 +43,18 @@ class LiarDiceGame:
 
     def challenge(self, challenger):
         players_dice = self.reveal_dice()
-        total_quantity = sum(dice.count(self.current_bid[1]) for dice in players_dice.values())
+        total_quantity = sum(dice.count(self.current_bid[1]) + dice.count(1) for dice in players_dice.values())
         result = None
+        dice_faces = {player: " ".join(str(die) for die in dice) for player, dice in players_dice.items()}
         if total_quantity >= self.current_bid[0]:
-            result = f"Challenge failed. Total dice count is {total_quantity}. Player {challenger} loses a die."
+            result = f"Challenge failed. Total dice count is {total_quantity}. {self.player_names[challenger]} loses a die.\n" \
+                     f"{self.player_names[1]}'s dice: {dice_faces[1]}\n{self.player_names[2]}'s dice: {dice_faces[2]}"
             self.dice_count[challenger] -= 1
             self.players[challenger].pop()
         else:
             self.switch_player()
-            result = f"Challenge successful. Total dice count is {total_quantity}. Player {self.current_player} loses a die."
+            result = f"Challenge successful. Total dice count is {total_quantity}. {self.player_names[self.current_player]} loses a die.\n" \
+                     f"{self.player_names[1]}'s dice: {dice_faces[1]}\n{self.player_names[2]}'s dice: {dice_faces[2]}"
             self.dice_count[self.current_player] -= 1
             self.players[self.current_player].pop()
         self.last_action_was_challenge = True  # Set the flag after a challenge
@@ -79,5 +87,6 @@ class LiarDiceGame:
             "players": self.players,
             "current_bid": self.current_bid,
             "current_player": self.current_player,
-            "last_action_was_challenge": self.last_action_was_challenge
+            "last_action_was_challenge": self.last_action_was_challenge,
+            "player_names": self.player_names,
         }

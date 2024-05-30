@@ -103,7 +103,7 @@ const AnswerButtons = ({ onClick, currentBid, previousBid, calledLiar }: AnswerB
                     onClick={handleCallLiarSubmit}
                     disabled={calledLiar.status}
                     className={`p-2 bg-carmine ${calledLiar.status ? 'opacity-50 cursor-not-allowed' : 'hover:bg-dark-red'} text-white font-bold rounded-lg`}>
-                    Call Liar
+                    Challenge
                 </button>
             </div>
         </div>
