@@ -182,7 +182,7 @@ const GamePage: React.FC = () => {
         <AnswerButtons
           currentBid={convertBid(gameState?.current_bid || null )}
           previousBid={isFirstBid ? null : convertBid(gameState?.current_bid || null)} 
-          calledLiar={{ status: gameState?.last_action_was_challenge || false, caller: '' }}
+          calledLiar={{ status: isFirstBid ? true : gameState?.last_action_was_challenge || false, caller: '' }}
           onClick={handleUserAction}
         />
       </div>
