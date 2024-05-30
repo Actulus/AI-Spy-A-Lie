@@ -80,49 +80,61 @@ const GamePage: React.FC = () => {
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
-      path: import.meta.env.VITE_REACT_APP_SOCKET_PATH,
-      query: { room: difficulty },
-    });
-
-    socketInstance.on('connect', () => {
-      setIsConnected(true);
-      setSidMaps(prevMaps => [...prevMaps, { name: userName, pic: userPic as string, sid: socketInstance.id as string, isAI: false }]);
-      socketInstance.emit('player_names', { userName, aiName })
-    });
-
-    socketInstance.on('disconnect', () => {
-      setIsConnected(false);
-    });
-
-    socketInstance.on('join', (data: { sid: string }) => {
-      setMessages(prevMessages => [...prevMessages, { ...data, type: 'join' }]);
-      if (data.sid.startsWith('ai_')) {
-        setSidMaps(prevMaps => [...prevMaps, { name: aiName, pic: aiPic, sid: data.sid, isAI: true }]);
-      } else if (data.sid !== socketInstance.id) {
-        setSidMaps(prevMaps => [...prevMaps, { name: `User ${data.sid.slice(-4)}`, pic: userPic, sid: data.sid, isAI: false }]);
-      }
-    });
-
-    socketInstance.on('chat', (data: { sid: string; message: string }) => {
-      setMessages(prevMessages => [...prevMessages, { ...data, type: 'chat' }]);
-    });
-
-    socketInstance.on('game_update', (data: GameState) => {
-      setGameState(data);
-    });
-
-    socketInstance.on('game_over', (data: { winner: string }) => {
-      setIsGameOver(true);
-      setWinner(data.winner);
-    });
-
-    socket.current = socketInstance;
-
+    const connectSocket = () => {
+      const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
+        path: import.meta.env.VITE_REACT_APP_SOCKET_PATH,
+        query: { room: difficulty },
+      });
+  
+      socketInstance.on('connect', () => {
+        setIsConnected(true);
+        setSidMaps([{ name: userName, pic: userPic as string, sid: socketInstance.id as string, isAI: false }]);
+        socketInstance.emit('player_names', { userName, aiName });
+      });
+  
+      socketInstance.on('disconnect', () => {
+        setIsConnected(false);
+      });
+  
+      socketInstance.on('join', (data: { sid: string }) => {
+        setMessages(prevMessages => [...prevMessages, { ...data, type: 'join' }]);
+        if (data.sid.startsWith('ai_')) {
+          setSidMaps(prevMaps => [...prevMaps, { name: aiName, pic: aiPic, sid: data.sid, isAI: true }]);
+        } else if (data.sid !== socketInstance.id) {
+          setSidMaps(prevMaps => [...prevMaps, { name: `User ${data.sid.slice(-4)}`, pic: userPic, sid: data.sid, isAI: false }]);
+        }
+      });
+  
+      socketInstance.on('chat', (data: { sid: string; message: string }) => {
+        setMessages(prevMessages => [...prevMessages, { ...data, type: 'chat' }]);
+      });
+  
+      socketInstance.on('game_update', (data: GameState) => {
+        setGameState(data);
+  
+        if (data.dice_count[1] === 0 || data.dice_count[2] === 0) {
+          setIsGameOver(true);
+          setWinner(data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1]);
+        }
+      });
+  
+      socketInstance.on('game_over', (data: { winner: string }) => {
+        setIsGameOver(true);
+        setWinner(data.winner);
+      });
+  
+      socket.current = socketInstance;
+    };
+  
+    connectSocket();
+  
     return () => {
-      socket.current?.disconnect();
+      if (socket.current) {
+        socket.current.disconnect();
+      }
     };
   }, [difficulty, userName, aiName, userPic, aiPic]);
+  
 
   useEffect(() => {
     if (endOfMessagesRef.current) {
@@ -148,19 +160,70 @@ const GamePage: React.FC = () => {
     return { number: bid[0], face: bid[1] !== 0 ? diceFaces[bid[1] - 1] : '⚀' }; // Convert face value to emoji
   };
 
-  const handlePlayAgain = () => {
-    // Reset game state and other variables
+  const handlePlayAgain = async () => {
+    // Reset the game state
     setIsGameOver(false);
-    setGameState(null);
     setIsFirstBid(true);
     setMessages([]);
-    setSidMaps([]);
-    // Reconnect to start a new game
+    setGameState(null);
+    setWinner(null);
+  
+    // Disconnect the current socket
     if (socket.current) {
-      socket.current.connect();
+      await socket.current.disconnect();
     }
-    window.location.reload();
+  
+    // Clear previous socket instance
+    // socket.current = null;
+  
+    // Establish a new socket connection after a short delay
+    setTimeout(() => {
+      const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
+        path: import.meta.env.VITE_REACT_APP_SOCKET_PATH,
+        query: { room: difficulty },
+      });
+  
+      socketInstance.on('connect', () => {
+        setIsConnected(true);
+        setSidMaps([{ name: userName, pic: userPic as string, sid: socketInstance.id as string, isAI: false }]);
+        socketInstance.emit('player_names', { userName, aiName });
+      });
+  
+      socketInstance.on('disconnect', () => {
+        setIsConnected(false);
+      });
+  
+      socketInstance.on('join', (data: { sid: string }) => {
+        setMessages(prevMessages => [...prevMessages, { ...data, type: 'join' }]);
+        if (data.sid.startsWith('ai_')) {
+          setSidMaps(prevMaps => [...prevMaps, { name: aiName, pic: aiPic, sid: data.sid, isAI: true }]);
+        } else if (data.sid !== socketInstance.id) {
+          setSidMaps(prevMaps => [...prevMaps, { name: `User ${data.sid.slice(-4)}`, pic: userPic, sid: data.sid, isAI: false }]);
+        }
+      });
+  
+      socketInstance.on('chat', (data: { sid: string; message: string }) => {
+        setMessages(prevMessages => [...prevMessages, { ...data, type: 'chat' }]);
+      });
+  
+      socketInstance.on('game_update', (data: GameState) => {
+        setGameState(data);
+  
+        if (data.dice_count[1] === 0 || data.dice_count[2] === 0) {
+          setIsGameOver(true);
+          setWinner(data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1]);
+        }
+      });
+  
+      socketInstance.on('game_over', (data: { winner: string }) => {
+        setIsGameOver(true);
+        setWinner(data.winner);
+      });
+  
+      socket.current = socketInstance;
+    }, 100);
   };
+  
 
   const handleGoHome = () => {
     // Redirect to home page

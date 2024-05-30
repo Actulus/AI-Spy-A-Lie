@@ -90,6 +90,7 @@ async def chat(sid, message):
                 face_value = int(face_value)
                 success = game.make_bid(1, quantity, face_value)  # Assuming player 1 is the user
                 
+
                 if success:
                     user_message = f"Bid: {quantity} {face_value}s."
                     response_message = "Bid successful."
@@ -176,4 +177,9 @@ def generate_ai_response(game, room):
         return f"Bid: {quantity} {face_value}s."
     else:
         result = game.challenge(2)
+        
+        if game.is_game_over():
+            winner = game.get_winner()
+            return f"Game over! {game.player_names[winner]} wins!"
+
         return f"Challenge! {result}"

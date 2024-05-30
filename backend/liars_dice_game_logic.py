@@ -50,22 +50,37 @@ class LiarDiceGame:
             total_quantity = sum(dice.count(1) for dice in players_dice.values())
         else:
             total_quantity = sum(dice.count(self.current_bid[1]) + dice.count(1) for dice in players_dice.values())
+
         result = None
         dice_faces = {player: " ".join(str(die) for die in dice) for player, dice in players_dice.items()}
+
         if total_quantity >= self.current_bid[0]:
+            # Switch player only after the challenge is handled
+            self.switch_player()
+            # Challenge failed: Challenger loses a die
             result = f"Challenge failed. Total dice count is {total_quantity}. {self.player_names[challenger]} loses a die.\n" \
                      f"{self.player_names[1]}'s dice: {dice_faces[1]}\n{self.player_names[2]}'s dice: {dice_faces[2]}"
             self.dice_count[challenger] -= 1
             self.players[challenger].pop()
         else:
+            # Switch player only after the challenge is handled
             self.switch_player()
+            # Challenge successful: Current player loses a die
             result = f"Challenge successful. Total dice count is {total_quantity}. {self.player_names[self.current_player]} loses a die.\n" \
                      f"{self.player_names[1]}'s dice: {dice_faces[1]}\n{self.player_names[2]}'s dice: {dice_faces[2]}"
             self.dice_count[self.current_player] -= 1
             self.players[self.current_player].pop()
+
         self.last_action_was_challenge = True  # Set the flag after a challenge
         self.current_bid = (0, 0)  # Reset the bid to minimum bid for new round
         self.roll_dice()
+
+        # Check for game over condition before switching players
+        if self.is_game_over():
+            return result
+        
+        
+
         return result
 
     def switch_player(self):
