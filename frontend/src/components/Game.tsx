@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useParams } from "react-router-dom";
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
@@ -230,6 +230,10 @@ const GamePage: React.FC = () => {
     window.location.href = '/home';
   };
 
+  const handleCloseModal = () => {
+    setIsGameOver(false);
+  }
+
 
   return (
     <div className="flex flex-col p-4">
@@ -254,6 +258,7 @@ const GamePage: React.FC = () => {
           winner={winner ?? ""}
           onPlayAgain={handlePlayAgain}
           onGoHome={handleGoHome}
+          onClose={handleCloseModal}
         />
       )}
     </div>
