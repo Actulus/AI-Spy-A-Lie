@@ -9,7 +9,7 @@ const HomePage: React.FC = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores/total`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

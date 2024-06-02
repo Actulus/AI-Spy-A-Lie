@@ -110,7 +110,7 @@ const GamePage: React.FC = () => {
       .catch((error) => {
         console.error('Error:', error);
       });
-  }, [user?.id]);
+  }, []);
 
   useEffect(() => {
     const connectSocket = () => {
