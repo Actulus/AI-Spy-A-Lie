@@ -15,7 +15,6 @@ const AnswerButtons = ({ onClick, currentBid, previousBid, calledLiar }: AnswerB
     const [selectedFace, setSelectedFace] = useState<string | null>(null);
 
     useEffect(() => {
-        console.log('previousBid', previousBid);
         if (previousBid === null) {
             setSelectedNumber(1);
             setSelectedFace(diceFaces[0]);
