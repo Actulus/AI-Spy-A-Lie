@@ -96,7 +96,8 @@ def get_all_users_total_highscores(db: Session = Depends(get_db)):
 
     # sort all_users_total_scores by total_score
     all_users_total_scores = sorted(all_users_total_scores, key=lambda x: x["user_score"], reverse=True)
-    return all_users_total_scores
+    # return the top 10 users
+    return all_users_total_scores[:10]
 
 
 @router.get("/highscores/{kinde_uuid}", response_model=List[HighscoreResponse])
