@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useParams } from "react-router-dom";
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
@@ -30,6 +30,7 @@ interface GameState {
   current_player: number;
   last_action_was_challenge: boolean;
   player_names: { [key: number]: string };
+  scores: { [key: number]: number };
 }
 
 const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
@@ -79,23 +80,55 @@ const GamePage: React.FC = () => {
 
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
+  const handleGameOver = useCallback(({ username, userScore, roomSocketId, AIBotType, kindeUUID, profilePicture }: {
+    username: string,
+    userScore: number,
+    roomSocketId: string,
+    AIBotType: string,
+    kindeUUID: string,
+    profilePicture: string
+  }) => {
+    setIsGameOver(true);
+
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        {
+          "user_name": username,
+          "user_score": userScore,
+          "room_socket_id": roomSocketId,
+          "ai_bot_type": AIBotType,
+          "kinde_uuid": kindeUUID,
+          "profile_picture": profilePicture 
+        }
+      ),
+    })
+      .then(response => response.json())
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+  }, [user?.id]);
+
   useEffect(() => {
     const connectSocket = () => {
       const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
         path: import.meta.env.VITE_REACT_APP_SOCKET_PATH,
         query: { room: difficulty },
       });
-  
+
       socketInstance.on('connect', () => {
         setIsConnected(true);
         setSidMaps([{ name: userName, pic: userPic as string, sid: socketInstance.id as string, isAI: false }]);
         socketInstance.emit('player_names', { userName, aiName });
       });
-  
+
       socketInstance.on('disconnect', () => {
         setIsConnected(false);
       });
-  
+
       socketInstance.on('join', (data: { sid: string }) => {
         setMessages(prevMessages => [...prevMessages, { ...data, type: 'join' }]);
         if (data.sid.startsWith('ai_')) {
@@ -104,37 +137,45 @@ const GamePage: React.FC = () => {
           setSidMaps(prevMaps => [...prevMaps, { name: `User ${data.sid.slice(-4)}`, pic: userPic, sid: data.sid, isAI: false }]);
         }
       });
-  
+
       socketInstance.on('chat', (data: { sid: string; message: string }) => {
         setMessages(prevMessages => [...prevMessages, { ...data, type: 'chat' }]);
       });
-  
+
       socketInstance.on('game_update', (data: GameState) => {
         setGameState(data);
-  
+
         if (data.dice_count[1] === 0 || data.dice_count[2] === 0) {
-          setIsGameOver(true);
-          setWinner(data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1]);
+          const winner = data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1];
+          setWinner(winner);
+          handleGameOver({
+            username: userName,
+            userScore: data.scores[1],
+            roomSocketId: socketInstance.id!,
+            AIBotType: difficulty!,
+            kindeUUID: user!.id!,
+            profilePicture: userPic
+          });
         }
       });
-  
+
       socketInstance.on('game_over', (data: { winner: string }) => {
         setIsGameOver(true);
         setWinner(data.winner);
       });
-  
+
       socket.current = socketInstance;
     };
-  
+
     connectSocket();
-  
+
     return () => {
       if (socket.current) {
         socket.current.disconnect();
       }
     };
-  }, [difficulty, userName, aiName, userPic, aiPic]);
-  
+  }, [difficulty, userName, aiName, userPic, aiPic, handleGameOver, user]);
+
 
   useEffect(() => {
     if (endOfMessagesRef.current) {
@@ -167,32 +208,32 @@ const GamePage: React.FC = () => {
     setMessages([]);
     setGameState(null);
     setWinner(null);
-  
+
     // Disconnect the current socket
     if (socket.current) {
       await socket.current.disconnect();
     }
-  
+
     // Clear previous socket instance
     // socket.current = null;
-  
+
     // Establish a new socket connection after a short delay
     setTimeout(() => {
       const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
         path: import.meta.env.VITE_REACT_APP_SOCKET_PATH,
         query: { room: difficulty },
       });
-  
+
       socketInstance.on('connect', () => {
         setIsConnected(true);
         setSidMaps([{ name: userName, pic: userPic as string, sid: socketInstance.id as string, isAI: false }]);
         socketInstance.emit('player_names', { userName, aiName });
       });
-  
+
       socketInstance.on('disconnect', () => {
         setIsConnected(false);
       });
-  
+
       socketInstance.on('join', (data: { sid: string }) => {
         setMessages(prevMessages => [...prevMessages, { ...data, type: 'join' }]);
         if (data.sid.startsWith('ai_')) {
@@ -201,29 +242,37 @@ const GamePage: React.FC = () => {
           setSidMaps(prevMaps => [...prevMaps, { name: `User ${data.sid.slice(-4)}`, pic: userPic, sid: data.sid, isAI: false }]);
         }
       });
-  
+
       socketInstance.on('chat', (data: { sid: string; message: string }) => {
         setMessages(prevMessages => [...prevMessages, { ...data, type: 'chat' }]);
       });
-  
+
       socketInstance.on('game_update', (data: GameState) => {
         setGameState(data);
-  
+
         if (data.dice_count[1] === 0 || data.dice_count[2] === 0) {
-          setIsGameOver(true);
-          setWinner(data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1]);
+          const winner = data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1];
+          setWinner(winner);
+          handleGameOver({
+            username: userName,
+            userScore: data.scores[1],
+            roomSocketId: socketInstance.id!,
+            AIBotType: difficulty!,
+            kindeUUID: user!.id!,
+            profilePicture: userPic
+          });
         }
       });
-  
+
       socketInstance.on('game_over', (data: { winner: string }) => {
         setIsGameOver(true);
         setWinner(data.winner);
       });
-  
+
       socket.current = socketInstance;
     }, 100);
   };
-  
+
 
   const handleGoHome = () => {
     // Redirect to home page
@@ -234,11 +283,16 @@ const GamePage: React.FC = () => {
     setIsGameOver(false);
   }
 
-
   return (
     <div className="flex flex-col p-4">
-      <h2 className="text-lg font-bold bg-spring-green w-fit p-2 rounded-lg">Connection status: {isConnected ? 'connected' : 'disconnected'}</h2>
-      <div className="overflow-y-scroll snap-y h-[40rem] bg-spring-green border border-black shadow-lg rounded-lg p-2 mt-4 flex flex-col">
+
+      <div className="flex justify-between gap-1">
+        <div className="flex bg-spring-green rounded-lg p-2 w-fit h-fit text-lg font-bold ">
+          <h3 className="text-xl font-bold">Your score: {gameState?.scores[1]}</h3>
+        </div>
+        <h2 className="text-lg font-bold bg-spring-green w-fit h-fit p-2 rounded-lg">Connection status: {isConnected ? 'connected' : 'disconnected'}</h2>
+      </div>
+      <div className="overflow-y-scroll snap-y h-[20rem] lg:h-[30rem] bg-spring-green border border-black shadow-lg rounded-lg p-2 mt-4 flex flex-col">
         {messages.map((message, index) => (
           <Message message={message} key={index} sidMaps={sidMaps} />
         ))}
@@ -247,8 +301,8 @@ const GamePage: React.FC = () => {
       <div className="flex flex-col mt-2 items-center lg:flex-row lg:justify-between gap-2">
         <RolledDiceFaces user="Your" rolledDice={gameState ? gameState.players[1].map(die => diceFaces[die - 1]) : []} />
         <AnswerButtons
-          currentBid={convertBid(gameState?.current_bid || null )}
-          previousBid={isFirstBid ? null : convertBid(gameState?.current_bid || null)} 
+          currentBid={convertBid(gameState?.current_bid || null)}
+          previousBid={isFirstBid ? null : convertBid(gameState?.current_bid || null)}
           calledLiar={{ status: isFirstBid ? true : gameState?.last_action_was_challenge || false, caller: '' }}
           onClick={handleUserAction}
         />

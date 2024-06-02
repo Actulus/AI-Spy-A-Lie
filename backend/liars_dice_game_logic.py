@@ -8,6 +8,7 @@ class LiarDiceGame:
         self.current_bid = (1, 1)  # Minimum bid to start each round
         self.current_player = 1
         self.last_action_was_challenge = False
+        self.scores = {1: 0, 2: 0}
         self.player_names = {1: 'Player 1', 2: 'Player 2'} # default player names
 
     def set_player_names(self, player1_name, player2_name):
@@ -42,6 +43,10 @@ class LiarDiceGame:
         self.last_action_was_challenge = False  # Reset the flag after a bid
         self.switch_player()
         return True
+    
+    def adjust_scores(self, winner, loser):
+        self.scores[winner] += 100
+        self.scores[loser] = max(self.scores[loser] - 100, 0)
 
 
     def challenge(self, challenger):
@@ -58,18 +63,20 @@ class LiarDiceGame:
             # Switch player only after the challenge is handled
             self.switch_player()
             # Challenge failed: Challenger loses a die
-            result = f"Challenge failed. Total dice count is {total_quantity}. {self.player_names[challenger]} loses a die.\n" \
+            result = f"Challenge failed. Total dice count is {total_quantity}. {self.player_names[challenger]} loses a dice and 100 points. {self.player_names[self.current_player]} wins 100 points.\n" \
                      f"{self.player_names[1]}'s dice: {dice_faces[1]}\n{self.player_names[2]}'s dice: {dice_faces[2]}"
             self.dice_count[challenger] -= 1
             self.players[challenger].pop()
+            self.adjust_scores(self.current_player, challenger)
         else:
             # Switch player only after the challenge is handled
             self.switch_player()
             # Challenge successful: Current player loses a die
-            result = f"Challenge successful. Total dice count is {total_quantity}. {self.player_names[self.current_player]} loses a die.\n" \
+            result = f"Challenge successful. Total dice count is {total_quantity}. {self.player_names[self.current_player]} loses a dice and 100 points. {self.player_names[challenger]} wins 100 points.\n" \
                      f"{self.player_names[1]}'s dice: {dice_faces[1]}\n{self.player_names[2]}'s dice: {dice_faces[2]}"
             self.dice_count[self.current_player] -= 1
             self.players[self.current_player].pop()
+            self.adjust_scores(challenger, self.current_player)
 
         self.last_action_was_challenge = True  # Set the flag after a challenge
         self.current_bid = (0, 0)  # Reset the bid to minimum bid for new round
@@ -79,8 +86,6 @@ class LiarDiceGame:
         if self.is_game_over():
             return result
         
-        
-
         return result
 
     def switch_player(self):
@@ -115,4 +120,5 @@ class LiarDiceGame:
             "current_player": self.current_player,
             "last_action_was_challenge": self.last_action_was_challenge,
             "player_names": self.player_names,
+            "scores": self.scores,
         }

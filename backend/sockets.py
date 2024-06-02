@@ -89,7 +89,6 @@ async def chat(sid, message):
                 quantity = int(quantity)
                 face_value = int(face_value)
                 success = game.make_bid(1, quantity, face_value)  # Assuming player 1 is the user
-                
 
                 if success:
                     user_message = f"Bid: {quantity} {face_value}s."

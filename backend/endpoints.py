@@ -6,6 +6,7 @@ from typing import List
 from uuid import UUID
 from database import get_db
 from models import Highscore
+from sqlalchemy import func
 import datetime
 
 router = APIRouter()
@@ -37,6 +38,10 @@ class HighscoreResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class TotalHighscoreResponse(BaseModel):
+    kinde_uuid: str
+    total_score: int
+
 @router.get('/highscores', response_model=List[HighscoreResponse])
 def get_all_highscores(db: Session = Depends(get_db)):
     highscores = db.query(Highscore).order_by(Highscore.user_score.desc()).order_by(Highscore.highscore_datetime.desc()).all()
@@ -55,6 +60,15 @@ def get_best_highscore_for_user(kinde_uuid: str, db: Session = Depends(get_db)):
     if not highscore:
         raise HTTPException(status_code=404, detail="No highscores found for this user")
     return highscore
+
+@router.get('/highscores/{kinde_uuid}/total', response_model=TotalHighscoreResponse)
+def get_total_highscore_for_user(kinde_uuid: str, db: Session = Depends(get_db)):
+    total_score = db.query(func.sum(Highscore.user_score)).filter(Highscore.kinde_uuid == kinde_uuid).scalar()
+    
+    if not total_score:
+        raise HTTPException(status_code=404, detail="No highscores found for this user")
+    
+    return {"kinde_uuid": kinde_uuid, "total_score": total_score}
 
 @router.post('/highscores', response_model=HighscoreResponse)
 def post_highscore(highscore: HighscoreCreate, db: Session = Depends(get_db)):
