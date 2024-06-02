@@ -2,7 +2,7 @@ import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import React from 'react';
 import { useState, useEffect } from 'react';
 import StatisticsPlayer from './partials/StatisticsPlayer';
-import { Player, HighscoreResponse } from '../../types';
+import { Player, HighscoreResponse, TotalHighscoreResponse } from '../../types';
 
 const ProfilePage: React.FC = () => {
     const user = useKindeAuth().user;
@@ -31,15 +31,15 @@ const ProfilePage: React.FC = () => {
     }, [user?.id]); 
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores/${user?.id}/best`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores/${user?.id}/total`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             }
         })
         .then(response => response.json())
-        .then((data: HighscoreResponse) => {
-            setHighscore(data.user_score);
+        .then((data: TotalHighscoreResponse) => {
+            setHighscore(data.total_score);
         })
         .catch((error) => {
             console.error('Error:', error);

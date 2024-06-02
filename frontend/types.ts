@@ -14,3 +14,8 @@ export type HighscoreResponse = {
     kinde_uuid: string;
     profile_picture: string;
 };
+
+export type TotalHighscoreResponse = {
+    kinde_uuid: string;
+    total_score: number;
+};
