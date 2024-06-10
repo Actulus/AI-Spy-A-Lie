@@ -5,23 +5,8 @@ import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import RolledDiceFaces from "./partials/RolledDiceFaces";
 import AnswerButtons from "./partials/AnswerButtons";
 import GameOverModal from "./partials/GameOverModal";
-
-interface MessageProps {
-  message: {
-    type: 'join' | 'chat';
-    sid: string;
-    message?: string;
-  };
-}
-
-interface SIDMapProps {
-  sidMaps: {
-    name: string;
-    pic: string;
-    sid: string;
-    isAI: boolean;
-  }[];
-}
+import { Message } from "./partials/Message";
+import TutorialPopUpModal from "./partials/TutorialPopUpModal";
 
 interface GameState {
   dice_count: { [key: number]: number };
@@ -34,30 +19,6 @@ interface GameState {
 }
 
 const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-
-export const Message: React.FC<MessageProps & SIDMapProps> = ({ message, sidMaps }) => {
-  const getDisplayName = (sid: string) => sidMaps.find(map => map.sid === sid)?.name || sid;
-  const getDisplayPic = (sid: string) => sidMaps.find(map => map.sid === sid)?.pic || sid;
-  const isAI = sidMaps.some(map => map.sid === message.sid && map.isAI);
-
-  if (message.type === 'join') return <p className="text-center text-dark-spring-green">{`${getDisplayName(message.sid)} just joined`}</p>;
-
-  if (message.type === 'chat') {
-    const messageClass = isAI ? "snap-center bg-tea-rose text-black self-start" : "snap-center bg-nyanza text-black self-end";
-
-    return (
-      <div className={`flex items-center ${isAI ? '' : 'justify-end'}`}>
-        {isAI ? <img src={getDisplayPic(message.sid)} alt="user" className={`w-8 h-8 mx-1 rounded-full`} /> : null}
-        <div className={`my-2 p-2 rounded-lg w-40 md:w-64 ${messageClass}`}>
-          <p className={`text-xs ${isAI ? 'text-start' : 'text-end'}`}>{`${getDisplayName(message.sid)}`}</p>
-          <p className={`${isAI ? 'text-start' : 'text-end'}`} style={{ whiteSpace: 'pre-line' }}>{`${message.message}`}</p>
-        </div>
-        {isAI ? null : <img src={getDisplayPic(message.sid)} alt="user" className={`w-8 h-8 mx-1 rounded-full`} />}
-      </div>
-    );
-  }
-  return null;
-};
 
 const GamePage: React.FC = () => {
   const { difficulty } = useParams<{ difficulty: string }>();
@@ -79,6 +40,32 @@ const GamePage: React.FC = () => {
   const [winner, setWinner] = useState<string | null>(null);
 
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
+
+  const isTutorialMode = difficulty === 'tutorial';
+  const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(isTutorialMode);
+  const [currentStep, setCurrentStep] = useState(0)
+
+  const steps = [
+    { title: 'Score', description: 'Here you can see your score.', highlight: 'score' },
+    { title: 'Connection status', description: 'Here you can see your connection status.', highlight: 'status' },
+    { title: 'Messages', description: 'Here you can see the gameplay.', highlight: 'messages' },
+    { title: 'Dices', description: 'Here you can see your dices.', highlight: 'dice' },
+    { title: 'Action', description: 'Here you can make your choice of either making a bid or challenging the opponent. When making a bid make sure that you choose the number of dices first and then the face.', highlight: 'answer-buttons' },
+  ];
+
+  const scoreRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const diceRef = useRef<HTMLDivElement>(null);
+  const answerButtonsRef = useRef<HTMLDivElement>(null);
+
+  const highlightRefs: { [key: string]: React.RefObject<HTMLElement> } = {
+    score: scoreRef,
+    status: statusRef,
+    messages: messagesRef,
+    dice: diceRef,
+    'answer-buttons': answerButtonsRef,
+  };
 
   const handleGameOver = useCallback(({ username, userScore, roomSocketId, AIBotType, kindeUUID, profilePicture }: {
     username: string,
@@ -102,7 +89,7 @@ const GamePage: React.FC = () => {
           "room_socket_id": roomSocketId,
           "ai_bot_type": AIBotType,
           "kinde_uuid": kindeUUID,
-          "profile_picture": profilePicture 
+          "profile_picture": profilePicture
         }
       ),
     })
@@ -283,24 +270,51 @@ const GamePage: React.FC = () => {
     setIsGameOver(false);
   }
 
-  return (
-    <div className="flex flex-col p-4">
+  const handleNextStep = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
 
+  const handlePreviousStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  return (
+    <div className="relative flex flex-col p-4">
+      {isTutorialMode && (
+        <TutorialPopUpModal
+          steps={steps}
+          isOpen={isTutorialModalOpen}
+          onClose={() => setIsTutorialModalOpen(false)}
+          currentStep={currentStep}
+          handleNextStep={handleNextStep}
+          handlePreviousStep={handlePreviousStep}
+          highlightRef={highlightRefs[steps[currentStep].highlight]}
+        />
+      )}
       <div className="flex justify-between gap-1">
-        <div className="flex bg-spring-green rounded-lg p-2 w-fit h-fit text-lg font-bold ">
+        <div ref={scoreRef} className={`flex bg-spring-green rounded-lg p-2 w-fit h-fit text-lg font-bold`}>
           <h3 className="text-xl font-bold">Your score: {gameState?.scores[1]}</h3>
         </div>
-        <h2 className="text-lg font-bold bg-spring-green w-fit h-fit p-2 rounded-lg">Connection status: {isConnected ? 'connected' : 'disconnected'}</h2>
+        <h2 ref={statusRef} className={`text-lg font-bold bg-spring-green w-fit h-fit p-2 rounded-lg`}>Connection status: {isConnected ? 'connected' : 'disconnected'}</h2>
       </div>
-      <div className="overflow-y-scroll snap-y h-[20rem] lg:h-[30rem] bg-spring-green border border-black shadow-lg rounded-lg p-2 mt-4 flex flex-col">
+      <div ref={messagesRef} className={`overflow-y-scroll snap-y h-[20rem] lg:h-[30rem] bg-spring-green border border-black shadow-lg rounded-lg p-2 mt-4 flex flex-col`}>
         {messages.map((message, index) => (
           <Message message={message} key={index} sidMaps={sidMaps} />
         ))}
         <div ref={endOfMessagesRef}></div>
       </div>
       <div className="flex flex-col mt-2 items-center lg:flex-row lg:justify-between gap-2">
-        <RolledDiceFaces user="Your" rolledDice={gameState ? gameState.players[1].map(die => diceFaces[die - 1]) : []} />
+        <RolledDiceFaces
+          ref={diceRef}
+          user="Your"
+          rolledDice={gameState ? gameState.players[1].map(die => diceFaces[die - 1]) : []}
+        />
         <AnswerButtons
+          ref={answerButtonsRef}
           currentBid={convertBid(gameState?.current_bid || null)}
           previousBid={isFirstBid ? null : convertBid(gameState?.current_bid || null)}
           calledLiar={{ status: isFirstBid ? true : gameState?.last_action_was_challenge || false, caller: '' }}

@@ -26,7 +26,7 @@ export default {
         'roboto': ['Roboto', 'sans-serif'],
         'keania-one': ['Keania One', 'cursive'],
         'concert-one': ['Concert One', 'cursive'],
-      }
+      },
     },
   },
   darkMode: "class",

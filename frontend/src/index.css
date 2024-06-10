@@ -5,3 +5,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Keania+One&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Concert+One&family=Keania+One&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
+.highlight {
+  position: absolute;
+  z-index: 10;
+  background-color: rgba(255, 255, 0, 0.3); /* Semi-transparent yellow background */
+  outline: 2px solid yellow;
+  box-sizing: border-box; /* Ensure padding and border are included in the element's size */
+  border-radius: 0.5rem;
+}

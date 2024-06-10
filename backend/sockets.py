@@ -13,8 +13,10 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from torch.cuda.amp import GradScaler, autocast
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Define QLearningAgent, DQN, and DQNAgent classes
 class QLearningAgent:
@@ -27,10 +29,10 @@ class QLearningAgent:
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
         self.q_table = {}
-    
+
     def get_state_key(self, state):
         return str(state)
-    
+
     def get_action(self, state):
         state_key = self.get_state_key(state)
         if random.uniform(0, 1) < self.epsilon:
@@ -38,37 +40,24 @@ class QLearningAgent:
         if state_key not in self.q_table:
             return random.choice(range(self.action_size))
         return np.argmax(self.q_table[state_key])
-    
-    def learn(self, state, action, reward, next_state):
-        state_key = self.get_state_key(state)
-        next_state_key = self.get_state_key(next_state)
-        if state_key not in self.q_table:
-            self.q_table[state_key] = np.zeros(self.action_size)
-        if next_state_key not in self.q_table:
-            self.q_table[next_state_key] = np.zeros(self.action_size)
-        
-        best_next_action = np.argmax(self.q_table[next_state_key])
-        td_target = reward + self.gamma * self.q_table[next_state_key][best_next_action]
-        td_error = td_target - self.q_table[state_key][action]
-        self.q_table[state_key][action] += self.alpha * td_error
-        
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+
+# Define the correct state size based on the saved model
+state_size = 12  # Adjusted to match the saved model
 
 class DQN(nn.Module):
     def __init__(self, state_size, action_size):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, 24)
-        self.fc2 = nn.Linear(24, 24)
-        self.fc3 = nn.Linear(24, action_size)
-    
+        self.fc1 = nn.Linear(state_size, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, action_size)
+
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
         return self.fc3(x)
 
 class DQNAgent:
-    def __init__(self, state_size, action_size, gamma=0.99, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, lr=0.001, batch_size=64, memory_size=1000000):
+    def __init__(self, state_size, action_size, gamma=0.99, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, lr=0.0001, batch_size=256, memory_size=100000):
         self.state_size = state_size
         self.action_size = action_size
         self.memory = deque(maxlen=memory_size)
@@ -78,112 +67,170 @@ class DQNAgent:
         self.epsilon_decay = epsilon_decay
         self.lr = lr
         self.batch_size = batch_size
-        self.model = DQN(state_size, action_size)
-        self.target_model = DQN(state_size, action_size)
+        self.model = DQN(state_size, action_size).to(device)
+        self.target_model = DQN(state_size, action_size).to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
         self.update_target_model()
-    
+
     def update_target_model(self):
         self.target_model.load_state_dict(self.model.state_dict())
-    
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((self.flatten_state(state), action, reward, self.flatten_state(next_state), done))
-    
+
     def flatten_state(self, state):
-        return np.concatenate([
-            np.array(list(state['dice_count'].values())), 
-            np.array(state['current_bid']), 
-            np.array([state['current_player']]), 
-            np.array([state['last_action_was_challenge']]), 
-            np.array(list(state['scores'].values()))
+        # Ensure the state is flattened to the correct size
+        dice_count = np.array(list(state['dice_count'].values()))
+        current_bid = np.array(state['current_bid'])
+        current_player = np.array([state['current_player']])
+        last_action_was_challenge = np.array([state['last_action_was_challenge']])
+        scores = np.array(list(state['scores'].values()))
+
+        flattened_state = np.concatenate([
+            dice_count,
+            current_bid,
+            current_player,
+            last_action_was_challenge,
+            scores
         ])
+
+        # Add additional padding to match the required state size of 12 if necessary
+        if flattened_state.size < state_size:
+            flattened_state = np.pad(flattened_state, (0, state_size - flattened_state.size), 'constant')
+
+        return flattened_state
 
     def get_action(self, state):
         state = self.flatten_state(state)
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        state = torch.FloatTensor(state)
+        state = torch.FloatTensor(state).unsqueeze(0).to(device)
         with torch.no_grad():
             q_values = self.model(state)
-        return np.argmax(q_values.cpu().numpy())
-    
-    def replay(self):
-        if len(self.memory) < self.batch_size:
-            return
-        minibatch = random.sample(self.memory, self.batch_size)
-        for state, action, reward, next_state, done in minibatch:
-            state = torch.FloatTensor(state)
-            next_state = torch.FloatTensor(next_state)
-            target = self.model(state).cpu().data.numpy()
-            if done:
-                target[action] = reward
-            else:
-                with torch.no_grad():
-                    t = self.target_model(next_state)
-                target[action] = reward + self.gamma * np.amax(t.cpu().numpy())
-            target = torch.FloatTensor(target)
-            self.optimizer.zero_grad()
-            output = self.model(state)
-            loss = F.mse_loss(output, target)
-            loss.backward()
-            self.optimizer.step()
-        
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-    
-    def learn(self, state, action, reward, next_state, done):
-        self.remember(state, action, reward, next_state, done)
-        self.replay()
+        return q_values.argmax().item()
 
-class EasyAI:
-    def __init__(self, game):
-        self.game = game
+
+class BayesianAgent:
+    def __init__(self, num_players, num_dice):
+        self.num_players = num_players
+        self.num_dice = num_dice
+        self.beliefs = self.initialize_beliefs()
+
+    def initialize_beliefs(self):
+        beliefs = np.ones((self.num_players, 6)) / 6
+        return beliefs
+
+    def update_beliefs(self, state, action):
+        if action['type'] == 'bid':
+            bid_quantity, bid_face = action['quantity'], action['face']
+            for player in range(self.num_players):
+                if player != state['current_player']:
+                    self.beliefs[player, bid_face - 1] *= bid_quantity / self.num_dice
+                    self.beliefs[player] /= np.sum(self.beliefs[player])
+        elif action['type'] == 'challenge':
+            challenged_bid = state['current_bid']
+            actual_quantity = state['dice_count'][challenged_bid[1] - 1]
+            if actual_quantity >= challenged_bid[0]:
+                for player in range(self.num_players):
+                    if player != state['current_player']:
+                        self.beliefs[player, challenged_bid[1] - 1] *= actual_quantity / self.num_dice
+                        self.beliefs[player] /= np.sum(self.beliefs[player])
+            else:
+                for player in range(self.num_players):
+                    if player != state['current_player']:
+                        self.beliefs[player, challenged_bid[1] - 1] *= (self.num_dice - actual_quantity) / self.num_dice
+                        self.beliefs[player] /= np.sum(self.beliefs[player])
 
     def get_action(self, state):
-        if self.game.is_game_over():
-            winner = self.game.get_winner()
-            return f"Game over! {self.game.player_names[winner]} wins!"
+        total_dice = self.num_dice * self.num_players
+        current_bid_face = state['current_bid'][1]
         
-        if self.game.last_action_was_challenge or self.game.current_bid == (1, 1):
-            action = 'bid'  # Force bid after challenge or for the first move
+        # Ensure current_bid_face is valid and within bounds
+        if current_bid_face - 1 < 0 or current_bid_face - 1 >= len(state['dice_count']):
+            logging.error(f"Invalid current_bid_face: {current_bid_face}")
+            return {'type': 'challenge'}
+
+        remaining_dice = total_dice - state['dice_count'][current_bid_face - 1]
+        prob_bid_correct = np.prod([np.sum(self.beliefs[player, current_bid_face - 1:]) for player in range(self.num_players) if player != state['current_player']])
+        prob_bid_incorrect = 1 - prob_bid_correct
+
+        if prob_bid_correct > 0.7:
+            quantity = state['current_bid'][0] + 1
+            face = current_bid_face
+            while quantity > remaining_dice:
+                quantity -= remaining_dice
+                face += 1
+            return {'type': 'bid', 'quantity': quantity, 'face': face}
         else:
-            action = random.choice(['bid', 'challenge'])
+            return {'type': 'challenge'}
 
-        # if current bid is 10 6s, challenge
-        if self.game.current_bid[0] == 10:
-            action = 'challenge'
+class LiarDiceGameEnv:
+    def __init__(self):
+        self.game = LiarDiceGame()
 
-        if action == 'bid':
+    def reset(self):
+        self.game.__init__()
+        state = {
+            'dice_count': self.game.get_dice_counts(),  # Ensure it's a dictionary
+            'current_bid': self.game.get_current_bid(),
+            'current_player': self.game.current_player,
+            'last_action_was_challenge': self.game.last_action_was_challenge,
+            'scores': self.game.scores,
+        }
+        return state
+
+    def step(self, action):
+        if action == 0:  # Bid
             quantity, face_value = self.game.random_bid()
-            self.game.make_bid(2, quantity, face_value)  # Assuming player 2 is the AI
-            return 0  # Bid action
-        else:
-            result = self.game.challenge(2)
-            
-            if self.game.is_game_over():
-                winner = self.game.get_winner()
-                return f"Game over! {self.game.player_names[winner]} wins!"
+            valid_bid = self.game.make_bid(self.game.current_player, quantity, face_value)
+            reward = 0
+            if not valid_bid:
+                reward = -10  # Invalid bid penalty
+        else:  # Challenge
+            result = self.game.challenge(self.game.current_player)
+            if "Challenge successful" in result:
+                reward = 10
+            else:
+                reward = -10
 
-            return 1  # Challenge action
+        done = self.game.is_game_over()
+        next_state = {
+            'dice_count': self.game.get_dice_counts(),  # Ensure it's a dictionary
+            'current_bid': self.game.get_current_bid(),
+            'current_player': self.game.current_player,
+            'last_action_was_challenge': self.game.last_action_was_challenge,
+            'scores': self.game.scores,
+        }
+        return next_state, reward, done, {}
+
+    def render(self):
+        pass  # Optional: Add rendering logic if needed
+
+    def get_winner(self):
+        return self.game.get_winner()
+
+
+
 
 # Custom Unpickler to handle loading with globals
 class CustomUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
         if name == 'QLearningAgent':
             return QLearningAgent
+        if name == 'DQNAgent':
+            return DQNAgent
+        if name == 'BayesianAgent':
+            return BayesianAgent
         return super().find_class(module, name)
 
 # Load the medium (Q-learning) agent
-with open('medium_agent.pkl', 'rb') as f:
+with open('medium_agent6.pkl', 'rb') as f:
     medium_agent = CustomUnpickler(f).load()
 
 # Load the hard (DQN) agent's attributes
-with open('hard_agent.pkl', 'rb') as f:
+with open('hard_agent6.pkl', 'rb') as f:
     attributes = CustomUnpickler(f).load()
 
 # Re-create the hard agent
 hard_agent = DQNAgent(
-    state_size=attributes['state_size'],
+    state_size=12,  # Adjusted state size based on the saved model
     action_size=attributes['action_size'],
     gamma=attributes['gamma'],
     epsilon=attributes['epsilon'],
@@ -193,15 +240,17 @@ hard_agent = DQNAgent(
     batch_size=attributes['batch_size']
 )
 
+
 # Load the models
-hard_agent.model.load_state_dict(torch.load('dqn_model.pth'))
-hard_agent.target_model.load_state_dict(torch.load('dqn_target_model.pth'))
+hard_agent.model.load_state_dict(torch.load('dqn_model6.pth'))
+hard_agent.target_model.load_state_dict(torch.load('dqn_target_model6.pth'))
 
 # Load the memory
 hard_agent.memory = attributes['memory']
 
 models = {
-    'easy': EasyAI,  # Assuming EasyAI class is defined
+    'tutorial': None,
+    'easy': None, 
     'medium': medium_agent,
     'hard': hard_agent,
 }
@@ -357,9 +406,9 @@ def get_ai_model(difficulty):
 
 def generate_ai_response(game, room):
     difficulty = room.split('_')[0]  # Extract difficulty from room name
-    model = get_ai_model(difficulty)
+    model = models.get(difficulty, models['medium'])  # Default to medium if difficulty not found
 
-    if difficulty == 'easy':
+    if difficulty == 'easy' or difficulty == 'tutorial':
         # Easy AI behavior
         if game.is_game_over():
             winner = game.get_winner()
@@ -392,9 +441,7 @@ def generate_ai_response(game, room):
         return f"Game over! {game.player_names[winner]} wins!"
 
     state = game.get_game_state()
-    if difficulty == 'medium':
-        action = model.get_action(state)
-    elif difficulty == 'hard':
+    if difficulty == 'medium' or difficulty == 'hard':
         action = model.get_action(state)
     
     if action == 0:  # Bid
