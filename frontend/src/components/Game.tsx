@@ -296,8 +296,10 @@ const GamePage: React.FC = () => {
         />
       )}
       <div className="flex justify-between gap-1">
-        <div ref={scoreRef} className={`flex bg-spring-green rounded-lg p-2 w-fit h-fit text-lg font-bold`}>
+        <div ref={scoreRef} className={`flex flex-col bg-spring-green rounded-lg p-2 w-fit h-fit text-lg font-bold`}>
           <h3 className="text-xl font-bold">Your score: {gameState?.scores[1]}</h3>
+          <h3 className="text-xl font-bold">AI score: {gameState?.scores[2]}</h3>
+          <h3 className="text-xl font-bold">AI dice count: {gameState?.players[2].length}</h3>
         </div>
         <h2 ref={statusRef} className={`text-lg font-bold bg-spring-green w-fit h-fit p-2 rounded-lg`}>Connection status: {isConnected ? 'connected' : 'disconnected'}</h2>
       </div>
