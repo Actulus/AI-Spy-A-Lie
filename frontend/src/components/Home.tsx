@@ -3,13 +3,34 @@ import Button from './partials/Button';
 import StatisticsPlayer from './partials/StatisticsPlayer';
 import { useNavigate } from 'react-router-dom';
 import { HighscoreResponse, Player } from '../../types';
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
 const HomePage: React.FC = () => {
+    const user = useKindeAuth().user;
     const [TopPlayers, setTopPlayers] = useState<Player[]>([]);
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores/total`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                "kinde_uuid": user?.id,
+                "user_name": user?.family_name + " " + user?.given_name,
+                "profile_picture": user?.picture,
+
+            })
+        })
+        .then(response => response.json())
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }, [user]);
+
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/leaderboard`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -19,7 +40,7 @@ const HomePage: React.FC = () => {
         .then((data: HighscoreResponse[]) => {
             const players = data.map((player: HighscoreResponse) => ({
                 name: player.user_name,
-                score: player.user_score,
+                score: player.user_total_score,
                 profile: player.profile_picture,
             }));
             setTopPlayers(players);

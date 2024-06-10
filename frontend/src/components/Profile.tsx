@@ -1,35 +1,32 @@
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { HighscoreResponse, TotalHighscoreResponse } from '../../types';
+import { PersonalStatisticsResponse, TotalHighscoreResponse } from '../../types';
 
-interface PersonalScores {
-    score: number;
-    highscore_datetime: Date;
-    ai_bot_type: string;
-}
 
 const ProfilePage: React.FC = () => {
     const user = useKindeAuth().user;
     const [highscore, setHighscore] = useState<number>(0);
-    const [userScores, setUserScores] = useState<PersonalScores[]>([]);
+    const [userScores, setUserScores] = useState<PersonalStatisticsResponse[]>([]);
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores/${user?.id}`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${user?.id}/match-histories`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             }
         })
             .then(response => response.json())
-            .then((data: HighscoreResponse[]) => {
-                const players = data.map((player: HighscoreResponse) => ({
-                    score: player.user_score,
-                    highscore_datetime: player.highscore_datetime,
-                    ai_bot_type: player.ai_bot_type,
+            .then((data: PersonalStatisticsResponse[]) => {
+                const players = data.map((player: PersonalStatisticsResponse) => ({
+                    match_id: player.match_id,
+                    match_date: player.match_date,
+                    user_score: player.user_score,
+                    opponents: player.opponents,
+                    ai_opponents: player.ai_opponents,
                 }));
 
-                players.sort((a, b) => new Date(b.highscore_datetime).getTime() - new Date(a.highscore_datetime).getTime());
+                players.sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime());
 
                 setUserScores(players);
             })
@@ -39,7 +36,7 @@ const ProfilePage: React.FC = () => {
     }, [user?.id]);
 
     useEffect(() => {
-        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores/${user?.id}/total`, {
+        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${user?.id}/total-score`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -47,7 +44,7 @@ const ProfilePage: React.FC = () => {
         })
             .then(response => response.json())
             .then((data: TotalHighscoreResponse) => {
-                setHighscore(data.total_score);
+                setHighscore(data.user_total_score);
             })
             .catch((error) => {
                 console.error('Error:', error);
@@ -80,21 +77,40 @@ const ProfilePage: React.FC = () => {
             </div>
             <div className='bg-spring-green rounded-lg font-keania-one w-full h-full flex flex-col justify-start col-start-1 md:col-start-2 md:row-start-1'>
                 <p className='md:text-4xl text-pakistan-green shadow-dark-spring-green'>Personal Statistics:</p>
-                <div className=' overflow-y-scroll h-96'>
-                    {userScores.map((player) => (
-                        <div className='flex flex-col bg-green-400 p-2 rounded-lg my-2'>
+                <div className='overflow-y-scroll h-96'>
+                    {userScores.map((match) => (
+                        <div key={match.match_id} className='flex flex-col bg-green-400 p-2 rounded-lg my-2'>
                             <div className='flex gap-1'>
-                                <p className='text-pakistan-green'>Score:</p>
-                                <p className='text-dark-spring-green font-roboto'>{player.score}</p>
+                                <p className='text-pakistan-green'>Match Date:</p>
+                                <p className='text-dark-spring-green font-roboto'>{formatDate(new Date(match.match_date))}</p>
                             </div>
                             <div className='flex gap-1'>
-                                <p className='text-pakistan-green'>Highscore Date:</p>
-                                <p className='text-dark-spring-green font-roboto'>{formatDate(player.highscore_datetime)}</p>
+                                <p className='text-pakistan-green'>User Score:</p>
+                                <p className='text-dark-spring-green font-roboto'>{match.user_score}</p>
                             </div>
-                            <div className='flex gap-1'>
-                                <p className='text-pakistan-green'>AI Bot Type:</p>
-                                <p className='text-dark-spring-green font-roboto'>{player.ai_bot_type}</p>
+                            {match.opponents.length > 0 &&
+                            <div>
+                                <p className='text-pakistan-green'>Opponents:</p>
+                                {match.opponents.map((opponent, index) => (
+                                    <div key={index} className='flex gap-1 ml-4'>
+                                        <p className='text-dark-spring-green font-roboto'>{opponent.user_name}:</p>
+                                        <p className='text-dark-spring-green font-roboto'>{opponent.score}</p>
+                                    </div>
+                                ))}
                             </div>
+                            }
+
+                            {match.ai_opponents.length > 0 &&
+                            <div>
+                                <p className='text-pakistan-green'>AI Opponents:</p>
+                                {match.ai_opponents.map((aiOpponent, index) => (
+                                    <div key={index} className='flex gap-1 ml-4'>
+                                        <p className='text-dark-spring-green font-roboto'>- {aiOpponent.ai_type}</p>
+                                        <p className='text-dark-spring-green font-roboto'> score:{aiOpponent.score}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            }
                         </div>
                     ))}
                 </div>

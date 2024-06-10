@@ -67,37 +67,31 @@ const GamePage: React.FC = () => {
     'answer-buttons': answerButtonsRef,
   };
 
-  const handleGameOver = useCallback(({ username, userScore, roomSocketId, AIBotType, kindeUUID, profilePicture }: {
-    username: string,
-    userScore: number,
+  const handleGameOver = useCallback(({ roomSocketId, kindeUUID, userScore, AIBotType, AIScore   }: {
     roomSocketId: string,
-    AIBotType: string,
     kindeUUID: string,
-    profilePicture: string
+    userScore: number,
+    AIBotType: string,
+    AIScore: number,
   }) => {
     setIsGameOver(true);
 
-    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/highscores`, {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/match`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(
-        {
-          "user_name": username,
-          "user_score": userScore,
-          "room_socket_id": roomSocketId,
-          "ai_bot_type": AIBotType,
-          "kinde_uuid": kindeUUID,
-          "profile_picture": profilePicture
-        }
-      ),
+      body: JSON.stringify({
+          "socket_id": roomSocketId,
+          "users": [{"kinde_uuid": kindeUUID, "score": userScore}],
+          "ai_opponents": [{"ai_type": AIBotType, "score": AIScore}],
+        }),
     })
       .then(response => response.json())
       .catch((error) => {
         console.error('Error:', error);
       });
-  }, []);
+  }, [setIsGameOver]);
 
   useEffect(() => {
     const connectSocket = () => {
@@ -136,12 +130,11 @@ const GamePage: React.FC = () => {
           const winner = data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1];
           setWinner(winner);
           handleGameOver({
-            username: userName,
-            userScore: data.scores[1],
             roomSocketId: socketInstance.id!,
-            AIBotType: difficulty!,
             kindeUUID: user!.id!,
-            profilePicture: userPic
+            userScore: data.scores[1],
+            AIBotType: difficulty!,
+            AIScore: data.scores[2],
           });
         }
       });
@@ -241,12 +234,11 @@ const GamePage: React.FC = () => {
           const winner = data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1];
           setWinner(winner);
           handleGameOver({
-            username: userName,
-            userScore: data.scores[1],
             roomSocketId: socketInstance.id!,
-            AIBotType: difficulty!,
             kindeUUID: user!.id!,
-            profilePicture: userPic
+            userScore: data.scores[1],
+            AIBotType: difficulty!,
+            AIScore: data.scores[2],
           });
         }
       });

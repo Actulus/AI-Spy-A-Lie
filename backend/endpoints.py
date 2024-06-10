@@ -1,160 +1,185 @@
-# endpoints.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 from typing import List
 from uuid import UUID
 from database import get_db
-from models import Highscore
-from sqlalchemy import func
+from models import User, UserMatchHistory, AIMatchHistory, Match
 import datetime
 
 router = APIRouter()
 
-
-class HighscoreCreate(BaseModel):
-    user_name: str
-    user_score: int
-    room_socket_id: str
-    ai_bot_type: str
+class UserCreate(BaseModel):
     kinde_uuid: str
     profile_picture: str
+    user_name: str
 
 
-class HighscoreResponse(BaseModel):
+class UserResponse(BaseModel):
     id: UUID
-    highscore_datetime: str
-    user_name: str
-    user_score: int
-    room_socket_id: str
-    ai_bot_type: str
     kinde_uuid: str
     profile_picture: str
-
-    @validator("highscore_datetime", pre=True, always=True)
-    def format_datetime(cls, value):
-        if isinstance(value, datetime.datetime):
-            return value.isoformat()
-        return value
-
-    class Config:
-        from_attributes = True
-
-
-class TotalHighscoreResponse(BaseModel):
-    kinde_uuid: str
-    total_score: int
-
-    class Config:
-        from_attributes = True
-
-
-class UserTotalScoreResponse(BaseModel):
-    kinde_uuid: str
+    is_admin: bool
     user_name: str
-    user_score: int
-    profile_picture: str
+    user_total_score: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    is_deleted: bool
 
-    class Config:
-        from_attributes = True
-
-
-@router.get("/highscores", response_model=List[HighscoreResponse])
-def get_all_highscores(db: Session = Depends(get_db)):
-    highscores = (
-        db.query(Highscore)
-        .order_by(Highscore.user_score.desc())
-        .order_by(Highscore.highscore_datetime.desc())
-        .all()
-    )
-    return highscores
-
-@router.get("/highscores/total", response_model=List[UserTotalScoreResponse])
-def get_all_users_total_highscores(db: Session = Depends(get_db)):
-    all_users_uuid = db.query(Highscore.kinde_uuid).distinct().all()
-
-    if not all_users_uuid:
-        raise HTTPException(status_code=404, detail="No highscores found for any user")
+    # class Config:
+    #     orm_mode = True
     
-    all_users_total_scores = []
-    for user_uuid_tuple in all_users_uuid:
-        user_uuid = user_uuid_tuple[0]
-        total_score = (
-            db.query(func.sum(Highscore.user_score))
-            .filter(Highscore.kinde_uuid == user_uuid)
-            .scalar()
-        )
-        user_info = db.query(Highscore).filter(Highscore.kinde_uuid == user_uuid).first()
-        user_name = user_info.user_name
-        profile_picture = user_info.profile_picture
-        all_users_total_scores.append({
-            "kinde_uuid": user_uuid,
-            "user_name": user_name,
-            "user_score": total_score,
-            "profile_picture": profile_picture
-        })
 
-    # sort all_users_total_scores by total_score
-    all_users_total_scores = sorted(all_users_total_scores, key=lambda x: x["user_score"], reverse=True)
-    # return the top 10 users
-    return all_users_total_scores[:10]
+class OpponentResponse(BaseModel):
+    user_name: str
+    score: int
 
+class AIOpponentResponse(BaseModel):
+    ai_type: str
+    score: int
 
-@router.get("/highscores/{kinde_uuid}", response_model=List[HighscoreResponse])
-def get_highscore_for_user(kinde_uuid: str, db: Session = Depends(get_db)):
-    highscores = (
-        db.query(Highscore)
-        .filter(Highscore.kinde_uuid == kinde_uuid)
-        .order_by(Highscore.user_score.desc())
-        .order_by(Highscore.highscore_datetime.desc())
-        .all()
-    )
-    if not highscores:
-        raise HTTPException(status_code=404, detail="No highscores found for this user")
-    return highscores
+class UserMatchHistoryResponse(BaseModel):
+    match_id: UUID
+    match_date: datetime
+    user_score: int
+    opponents: List[OpponentResponse]
+    ai_opponents: List[AIOpponentResponse]
+
+    class Config:
+        arbitrary_types_allowed = True
+
+class MatchResponse(BaseModel):
+    id: UUID
+    match_date: datetime.datetime
+    room_socket_id: str
+
+    class Config:
+        orm_mode = True
 
 
-@router.get("/highscores/{kinde_uuid}/best", response_model=HighscoreResponse)
-def get_best_highscore_for_user(kinde_uuid: str, db: Session = Depends(get_db)):
-    highscore = (
-        db.query(Highscore)
-        .filter(Highscore.kinde_uuid == kinde_uuid)
-        .order_by(Highscore.user_score.desc())
-        .first()
-    )
-    if not highscore:
-        raise HTTPException(status_code=404, detail="No highscores found for this user")
-    return highscore
+class MatchCreate(BaseModel):
+    socket_id: str
+    users: List[dict]
+    ai_opponents: List[dict]
 
 
-@router.get("/highscores/{kinde_uuid}/total", response_model=TotalHighscoreResponse)
-def get_total_highscore_for_user(kinde_uuid: str, db: Session = Depends(get_db)):
-    total_score = (
-        db.query(func.sum(Highscore.user_score))
-        .filter(Highscore.kinde_uuid == kinde_uuid)
-        .scalar()
-    )
-
-    if not total_score:
-        raise HTTPException(status_code=404, detail="No highscores found for this user")
-
-    return {"kinde_uuid": kinde_uuid, "total_score": total_score}
-
-
-
-
-
-@router.post("/highscores", response_model=HighscoreResponse)
-def post_highscore(highscore: HighscoreCreate, db: Session = Depends(get_db)):
-    db_highscore = Highscore(
-        user_name=highscore.user_name,
-        user_score=highscore.user_score,
-        room_socket_id=highscore.room_socket_id,
-        ai_bot_type=highscore.ai_bot_type,
-        kinde_uuid=highscore.kinde_uuid,
-        profile_picture=highscore.profile_picture,
-    )
-    db.add(db_highscore)
+def update_user_total_score(kinde_uuid: str, score: int, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.kinde_uuid == kinde_uuid).first()
+    db_user.user_total_score += score
     db.commit()
-    db.refresh(db_highscore)
-    return db_highscore
+    db.refresh(db_user)
+    return db_user
+
+@router.post("/match", response_model=MatchResponse)
+def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
+    # log the match data
+    print(match_data)
+    
+    # Create a new match with the current date and socket ID
+    new_match = Match(
+        match_date=datetime.datetime.now(),
+        room_socket_id=match_data.socket_id
+    )
+    db.add(new_match)
+    db.commit()
+    db.refresh(new_match)
+
+
+    # Create user match histories for each user and their score
+    for user_data in match_data.users:
+        user_match_history = UserMatchHistory(
+            match_id=new_match.id,
+            user_kinde_uuid=user_data["kinde_uuid"],
+            score=user_data["score"]
+        )
+        db.add(user_match_history)
+        db.commit()
+        db.refresh(user_match_history)
+
+        # Update the total user score for each user based on their score in the match
+        update_user_total_score(user_data["kinde_uuid"], user_data["score"], db)
+
+    # Create AI match histories for each AI opponent and their score
+    for ai_data in match_data.ai_opponents:
+        ai_match_history = AIMatchHistory(
+            match_id=new_match.id,
+            ai_type=ai_data["ai_type"],
+            score=ai_data["score"]
+        )
+        db.add(ai_match_history)
+        db.commit()
+        db.refresh(ai_match_history)
+
+    return new_match
+
+
+@router.post("/user", response_model=UserResponse)
+def create_or_get_user(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.kinde_uuid == user.kinde_uuid).first()
+    if db_user:
+        return db_user
+    else:
+        new_user = User(
+            kinde_uuid=user.kinde_uuid,
+            profile_picture=user.profile_picture,
+            user_name=user.user_name
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+
+@router.get("/users/leaderboard", response_model=List[UserResponse])
+def get_leaderboard(db: Session = Depends(get_db)):
+    leaderboard = db.query(User).order_by(User.user_total_score.desc()).limit(10).all()
+    return leaderboard
+
+@router.get("/users/{kinde_uuid}", response_model=UserResponse)
+def get_user(kinde_uuid: str, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.kinde_uuid == kinde_uuid).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+
+@router.get("/users/{kinde_uuid}/match-histories", response_model=List[UserMatchHistoryResponse])
+def get_user_match_histories(kinde_uuid: str, db: Session = Depends(get_db)):
+    user_match_histories = db.query(UserMatchHistory).filter(UserMatchHistory.user_kinde_uuid == kinde_uuid).all()
+    
+    match_history_responses = []
+    for user_match_history in user_match_histories:
+        match = db.query(Match).filter(Match.id == user_match_history.match_id).first()
+        
+        opponents = []
+        other_user_match_histories = db.query(UserMatchHistory).filter(
+            UserMatchHistory.match_id == user_match_history.match_id,
+            UserMatchHistory.user_kinde_uuid != kinde_uuid
+        ).all()
+
+        for other_user_match_history in other_user_match_histories:
+            other_user = db.query(User).filter(User.kinde_uuid == other_user_match_history.user_kinde_uuid).first()
+            opponents.append(OpponentResponse(user_name=other_user.user_name, score=other_user_match_history.score))
+        
+        ai_opponents = []
+        ai_match_histories = db.query(AIMatchHistory).filter(AIMatchHistory.match_id == user_match_history.match_id).all()
+        for ai_match_history in ai_match_histories:
+            ai_opponents.append(AIOpponentResponse(ai_type=ai_match_history.ai_type, score=ai_match_history.score))
+        
+        match_history_response = UserMatchHistoryResponse(
+            match_id=user_match_history.match_id,
+            match_date=match.match_date,
+            user_score=user_match_history.score,
+            opponents=opponents,
+            ai_opponents=ai_opponents
+        )
+        match_history_responses.append(match_history_response)
+    
+    return match_history_responses
+
+@router.get("/users/{kinde_uuid}/total-score", response_model=dict)
+def get_user_total_score(kinde_uuid: str, db: Session = Depends(get_db)):
+    user_total_score = db.query(User).filter(User.kinde_uuid == kinde_uuid).first().user_total_score
+    
+    return {"user_total_score": user_total_score}
+
+
