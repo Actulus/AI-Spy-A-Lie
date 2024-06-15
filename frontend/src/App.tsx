@@ -44,8 +44,8 @@ function App() {
           <Route path="/" element={<WelcomePage />} />
           <Route path="*" element={<NotFoundPage />} />
           {isAuthenticated && (
-            <Route path="/" element={<Layout isAdmin={isAdmin}/>} >
-              <Route path="/home" element={<HomePage />} />
+            <Route path="/" element={<Layout />} >
+              <Route path="/home" element={<HomePage isAdmin={isAdmin} />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/play-game" element={<PlayGamePage />} />
               <Route path="/game/:difficulty" element={<GamePage />} />

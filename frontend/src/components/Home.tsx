@@ -1,14 +1,22 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from './partials/Button';
 import StatisticsPlayer from './partials/StatisticsPlayer';
 import { useNavigate } from 'react-router-dom';
 import { HighscoreResponse, Player } from '../../types';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
-const HomePage: React.FC = () => {
+interface HomePageProps {
+    isAdmin: boolean;
+}
+
+const HomePage: React.FC<HomePageProps> = ({ isAdmin }: { isAdmin: boolean }) => {
     const user = useKindeAuth().user;
     const [TopPlayers, setTopPlayers] = useState<Player[]>([]);
     const navigate = useNavigate();
+
+    const handleStatisticsClicked = () => {
+        navigate('/statistics')
+    }
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
@@ -23,10 +31,10 @@ const HomePage: React.FC = () => {
 
             })
         })
-        .then(response => response.json())
-        .catch((error) => {
-            console.error('Error:', error);
-        });
+            .then(response => response.json())
+            .catch((error) => {
+                console.error('Error:', error);
+            });
     }, [user]);
 
     useEffect(() => {
@@ -36,20 +44,20 @@ const HomePage: React.FC = () => {
                 'Content-Type': 'application/json',
             }
         })
-        .then(response => response.json())
-        .then((data: HighscoreResponse[]) => {
-            const players = data.map((player: HighscoreResponse) => ({
-                name: player.user_name,
-                score: player.user_total_score,
-                profile: player.profile_picture,
-            }));
-            setTopPlayers(players);
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
-    }, []);    
-    
+            .then(response => response.json())
+            .then((data: HighscoreResponse[]) => {
+                const players = data.map((player: HighscoreResponse) => ({
+                    name: player.user_name,
+                    score: player.user_total_score,
+                    profile: player.profile_picture,
+                }));
+                setTopPlayers(players);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+    }, []);
+
     const handlePlayButtonClick = () => {
         navigate('/play-game')
     }
@@ -94,7 +102,12 @@ const HomePage: React.FC = () => {
                 </div>
             </div>
             <div className='bg-spring-green rounded-lg font-keania-one w-full h-full p-5 flex flex-col justify-start col-start-1 md:col-start-2 md:row-start-1'>
-                <p className='text-pakistan-green text-shadow-sm shadow-dark-spring-green'>Statistics</p>
+                <div className='flex justify-between'>
+                    <p className='text-pakistan-green text-shadow-sm shadow-dark-spring-green'>Statistics</p>
+                    {isAdmin &&
+                        <Button name='statistics-button' onClick={handleStatisticsClicked} style='my-0 mx-0'>Statistics</Button>
+                    }
+                </div>
                 <ul className='flex flex-col gap-3 mt-2'>
                     {TopPlayers.slice(0, 10).map((player, index) => (
                         <StatisticsPlayer key={index} name={player.name ? player.name : "Player"} score={player.score} profile={player.profile ? player.profile : '/cat_pfp.png'} />
