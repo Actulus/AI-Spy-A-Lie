@@ -93,7 +93,7 @@ const ProfilePage: React.FC = () => {
                                 <p className='text-pakistan-green'>Opponents:</p>
                                 {match.opponents.map((opponent, index) => (
                                     <div key={index} className='flex gap-1 ml-4'>
-                                        <p className='text-dark-spring-green font-roboto'>{opponent.user_name}:</p>
+                                        <p className='text-dark-spring-green font-roboto'>- {opponent.user_name}:</p>
                                         <p className='text-dark-spring-green font-roboto'>{opponent.score}</p>
                                     </div>
                                 ))}
@@ -105,8 +105,8 @@ const ProfilePage: React.FC = () => {
                                 <p className='text-pakistan-green'>AI Opponents:</p>
                                 {match.ai_opponents.map((aiOpponent, index) => (
                                     <div key={index} className='flex gap-1 ml-4'>
-                                        <p className='text-dark-spring-green font-roboto'>- {aiOpponent.ai_type}</p>
-                                        <p className='text-dark-spring-green font-roboto'> score:{aiOpponent.score}</p>
+                                        <p className='text-dark-spring-green font-roboto'>- {aiOpponent.ai_type}:</p>
+                                        <p className='text-dark-spring-green font-roboto'>{aiOpponent.score}</p>
                                     </div>
                                 ))}
                             </div>

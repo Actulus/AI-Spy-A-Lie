@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict, Any 
 from uuid import UUID
 from database import get_db
 from models import User, UserMatchHistory, AIMatchHistory, Match
-import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import func
 
 router = APIRouter()
 
@@ -22,8 +23,8 @@ class UserResponse(BaseModel):
     is_admin: bool
     user_name: str
     user_total_score: int
-    created_at: datetime.datetime
-    updated_at: datetime.datetime
+    created_at: datetime
+    updated_at: datetime
     is_deleted: bool
 
     # class Config:
@@ -50,11 +51,11 @@ class UserMatchHistoryResponse(BaseModel):
 
 class MatchResponse(BaseModel):
     id: UUID
-    match_date: datetime.datetime
+    match_date: datetime
     room_socket_id: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class MatchCreate(BaseModel):
@@ -63,6 +64,64 @@ class MatchCreate(BaseModel):
     ai_opponents: List[dict]
 
 
+class MatchStatisticsResponse(BaseModel):
+    total_matches: int
+    matches_per_day: Dict[str, int]
+    average_user_score: Dict[str, Any]
+    ai_performance: Dict[str, Any]
+
+
+@router.get("/statistics")
+def get_statistics(request: Request, db: Session = Depends(get_db)):
+    kinde_uuid = request.headers.get("kinde_uuid")
+    if not kinde_uuid:
+        raise HTTPException(status_code=400, detail="kinde_uuid not provided in headers")
+    
+    db_user = db.query(User).filter(User.kinde_uuid == kinde_uuid).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if db_user.is_admin:
+        total_matches = db.query(Match).count()
+    
+        # Matches per day
+        matches_per_day = (
+            db.query(func.date(Match.match_date), func.count(Match.id))
+            .group_by(func.date(Match.match_date))
+            .all()
+        )
+        matches_per_day_dict = {str(date): count for date, count in matches_per_day}
+        
+        # Average user score over the past month
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        average_user_score_data = (
+            db.query(func.date(Match.match_date), func.avg(UserMatchHistory.score))
+            .join(UserMatchHistory, Match.id == UserMatchHistory.match_id)
+            .filter(Match.match_date.between(start_date, end_date))
+            .group_by(func.date(Match.match_date))
+            .all()
+        )
+        average_user_score = {str(date): avg_score for date, avg_score in average_user_score_data}
+        
+        # AI performance
+        ai_performance_data = (
+            db.query(AIMatchHistory.ai_type, func.avg(AIMatchHistory.score), func.count(AIMatchHistory.id))
+            .group_by(AIMatchHistory.ai_type)
+            .all()
+        )
+        ai_performance = {ai_type: {"average_score": avg_score, "matches_played": count} for ai_type, avg_score, count in ai_performance_data}
+
+        return {
+            "total_matches": total_matches,
+            "matches_per_day": matches_per_day_dict,
+            "average_user_score": average_user_score,
+            "ai_performance": ai_performance
+        }
+    else:
+        # User is not an admin
+        return {"message": "Statistics need admin permissions to view."}
+    
 def update_user_total_score(kinde_uuid: str, score: int, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.kinde_uuid == kinde_uuid).first()
     db_user.user_total_score += score
@@ -77,7 +136,7 @@ def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
     
     # Create a new match with the current date and socket ID
     new_match = Match(
-        match_date=datetime.datetime.now(),
+        match_date=datetime.now(),
         room_socket_id=match_data.socket_id
     )
     db.add(new_match)
