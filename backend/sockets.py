@@ -1,259 +1,49 @@
 import random
+import numpy as np
 import socketio
 import uuid
 import logging
 import asyncio
+from q_learning_agent import QLearningAgent
+from mcts_agent import MCTSAgent
+from sarsa_agent import SARSAAgent
+from dqn_agent import DQNAgent
+from load_agents import load_agents
 from liars_dice_game_logic import LiarDiceGame
-import pickle
-import torch
 import sys
 import os
-from collections import deque
-import numpy as np
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.cuda.amp import GradScaler, autocast
+
+game_counter = 0
+SAVE_INTERVAL = 10  # Adjust this value as needed
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Define QLearningAgent, DQN, and DQNAgent classes
-class QLearningAgent:
-    def __init__(self, action_size, state_size, alpha=0.1, gamma=0.99, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.01):
-        self.action_size = action_size
-        self.state_size = state_size
-        self.alpha = alpha
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
-        self.epsilon_min = epsilon_min
-        self.q_table = {}
-
-    def get_state_key(self, state):
-        return str(state)
-
-    def get_action(self, state):
-        state_key = self.get_state_key(state)
-        if random.uniform(0, 1) < self.epsilon:
-            return random.choice(range(self.action_size))
-        if state_key not in self.q_table:
-            return random.choice(range(self.action_size))
-        return np.argmax(self.q_table[state_key])
-
-# Define the correct state size based on the saved model
-state_size = 12  # Adjusted to match the saved model
-
-class DQN(nn.Module):
-    def __init__(self, state_size, action_size):
-        super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, action_size)
-
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        return self.fc3(x)
-
-class DQNAgent:
-    def __init__(self, state_size, action_size, gamma=0.99, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, lr=0.0001, batch_size=256, memory_size=100000):
-        self.state_size = state_size
-        self.action_size = action_size
-        self.memory = deque(maxlen=memory_size)
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.epsilon_min = epsilon_min
-        self.epsilon_decay = epsilon_decay
-        self.lr = lr
-        self.batch_size = batch_size
-        self.model = DQN(state_size, action_size).to(device)
-        self.target_model = DQN(state_size, action_size).to(device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
-        self.update_target_model()
-
-    def update_target_model(self):
-        self.target_model.load_state_dict(self.model.state_dict())
-
-    def flatten_state(self, state):
-        # Ensure the state is flattened to the correct size
-        dice_count = np.array(list(state['dice_count'].values()))
-        current_bid = np.array(state['current_bid'])
-        current_player = np.array([state['current_player']])
-        last_action_was_challenge = np.array([state['last_action_was_challenge']])
-        scores = np.array(list(state['scores'].values()))
-
-        flattened_state = np.concatenate([
-            dice_count,
-            current_bid,
-            current_player,
-            last_action_was_challenge,
-            scores
-        ])
-
-        # Add additional padding to match the required state size of 12 if necessary
-        if flattened_state.size < state_size:
-            flattened_state = np.pad(flattened_state, (0, state_size - flattened_state.size), 'constant')
-
-        return flattened_state
-
-    def get_action(self, state):
-        state = self.flatten_state(state)
-        if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)
-        state = torch.FloatTensor(state).unsqueeze(0).to(device)
-        with torch.no_grad():
-            q_values = self.model(state)
-        return q_values.argmax().item()
-
-
-class BayesianAgent:
-    def __init__(self, num_players, num_dice):
-        self.num_players = num_players
-        self.num_dice = num_dice
-        self.beliefs = self.initialize_beliefs()
-
-    def initialize_beliefs(self):
-        beliefs = np.ones((self.num_players, 6)) / 6
-        return beliefs
-
-    def update_beliefs(self, state, action):
-        if action['type'] == 'bid':
-            bid_quantity, bid_face = action['quantity'], action['face']
-            for player in range(self.num_players):
-                if player != state['current_player']:
-                    self.beliefs[player, bid_face - 1] *= bid_quantity / self.num_dice
-                    self.beliefs[player] /= np.sum(self.beliefs[player])
-        elif action['type'] == 'challenge':
-            challenged_bid = state['current_bid']
-            actual_quantity = state['dice_count'][challenged_bid[1] - 1]
-            if actual_quantity >= challenged_bid[0]:
-                for player in range(self.num_players):
-                    if player != state['current_player']:
-                        self.beliefs[player, challenged_bid[1] - 1] *= actual_quantity / self.num_dice
-                        self.beliefs[player] /= np.sum(self.beliefs[player])
-            else:
-                for player in range(self.num_players):
-                    if player != state['current_player']:
-                        self.beliefs[player, challenged_bid[1] - 1] *= (self.num_dice - actual_quantity) / self.num_dice
-                        self.beliefs[player] /= np.sum(self.beliefs[player])
-
-    def get_action(self, state):
-        total_dice = self.num_dice * self.num_players
-        current_bid_face = state['current_bid'][1]
-        
-        # Ensure current_bid_face is valid and within bounds
-        if current_bid_face - 1 < 0 or current_bid_face - 1 >= len(state['dice_count']):
-            logging.error(f"Invalid current_bid_face: {current_bid_face}")
-            return {'type': 'challenge'}
-
-        remaining_dice = total_dice - state['dice_count'][current_bid_face - 1]
-        prob_bid_correct = np.prod([np.sum(self.beliefs[player, current_bid_face - 1:]) for player in range(self.num_players) if player != state['current_player']])
-        prob_bid_incorrect = 1 - prob_bid_correct
-
-        if prob_bid_correct > 0.7:
-            quantity = state['current_bid'][0] + 1
-            face = current_bid_face
-            while quantity > remaining_dice:
-                quantity -= remaining_dice
-                face += 1
-            return {'type': 'bid', 'quantity': quantity, 'face': face}
-        else:
-            return {'type': 'challenge'}
-
-class LiarDiceGameEnv:
-    def __init__(self):
-        self.game = LiarDiceGame()
-
-    def reset(self):
-        self.game.__init__()
-        state = {
-            'dice_count': self.game.get_dice_counts(),  # Ensure it's a dictionary
-            'current_bid': self.game.get_current_bid(),
-            'current_player': self.game.current_player,
-            'last_action_was_challenge': self.game.last_action_was_challenge,
-            'scores': self.game.scores,
-        }
-        return state
-
-    def step(self, action):
-        if action == 0:  # Bid
-            quantity, face_value = self.game.random_bid()
-            valid_bid = self.game.make_bid(self.game.current_player, quantity, face_value)
-            reward = 0
-            if not valid_bid:
-                reward = -10  # Invalid bid penalty
-        else:  # Challenge
-            result = self.game.challenge(self.game.current_player)
-            if "Challenge successful" in result:
-                reward = 10
-            else:
-                reward = -10
-
-        done = self.game.is_game_over()
-        next_state = {
-            'dice_count': self.game.get_dice_counts(),  # Ensure it's a dictionary
-            'current_bid': self.game.get_current_bid(),
-            'current_player': self.game.current_player,
-            'last_action_was_challenge': self.game.last_action_was_challenge,
-            'scores': self.game.scores,
-        }
-        return next_state, reward, done, {}
-
-    def render(self):
-        pass  # Optional: Add rendering logic if needed
-
-    def get_winner(self):
-        return self.game.get_winner()
-
-
-
-
-# Custom Unpickler to handle loading with globals
-class CustomUnpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        if name == 'QLearningAgent':
-            return QLearningAgent
-        if name == 'DQNAgent':
-            return DQNAgent
-        if name == 'BayesianAgent':
-            return BayesianAgent
-        return super().find_class(module, name)
-
-# Load the medium (Q-learning) agent
-with open('medium_agent6.pkl', 'rb') as f:
-    medium_agent = CustomUnpickler(f).load()
-
-# Load the hard (DQN) agent's attributes
-with open('hard_agent6.pkl', 'rb') as f:
-    attributes = CustomUnpickler(f).load()
-
-# Re-create the hard agent
-hard_agent = DQNAgent(
-    state_size=12,  # Adjusted state size based on the saved model
-    action_size=attributes['action_size'],
-    gamma=attributes['gamma'],
-    epsilon=attributes['epsilon'],
-    epsilon_min=attributes['epsilon_min'],
-    epsilon_decay=attributes['epsilon_decay'],
-    lr=attributes['lr'],
-    batch_size=attributes['batch_size']
+# Load the agents
+easy_agent, medium_agent, hard_agent = load_agents(
+    easy_filename='q_learning_agent.pkl',    
+    medium_filename='dqn_agent.pkl',    
+    hard_filename='mcts_agent.pkl'      
 )
 
-
-# Load the models
-hard_agent.model.load_state_dict(torch.load('dqn_model6.pth'))
-hard_agent.target_model.load_state_dict(torch.load('dqn_target_model6.pth'))
-
-# Load the memory
-hard_agent.memory = attributes['memory']
-
+# Initialize the models dictionary
 models = {
     'tutorial': None,
-    'easy': None, 
+    'easy': easy_agent,
     'medium': medium_agent,
-    'hard': hard_agent,
+    'hard': hard_agent
 }
+
+# print easy model to "easy_model.txt"
+with open("easy_model.txt", "w") as f:
+    f.write(str(models['easy']))
+
+# print medium model to "medium_model.txt"
+with open("medium_model.txt", "w") as f:
+    f.write(str(models['medium']))
+
+# print hard model to "hard_model.txt"
+with open("hard_model.txt", "w") as f:
+    f.write(str(models['hard']))
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -329,10 +119,19 @@ async def chat(sid, message):
         game = games[room]
         response_message = None
         user_message = None
-        
+        difficulty = room.split('_')[0]
+
+        if difficulty == 'tutorial':
+            model = None  # No model for tutorial, handled by heuristic
+        else:
+            model = models.get(difficulty, models['medium'])
+
+        # Capture initial state
+        initial_state = game.get_game_state()
+
         # If the message is from the user, let the AI respond
         if not sid.startswith('ai_'):
-            # handle player move
+            # Handle player move
             if message.startswith('bid'):
                 _, quantity, face_value = message.split()
                 quantity = int(quantity)
@@ -362,10 +161,12 @@ async def chat(sid, message):
             game_state = game.get_game_state()
             await socketio_server.emit('game_update', game_state, room=room)
 
-            # AI response based on the game state
+            # Check game over condition after player move
             if game.is_game_over():
                 winner = game.get_winner()
                 await socketio_server.emit('game_over', {'winner': game.player_names[winner]}, room=room)
+                increment_game_counter()
+                return
             else:
                 ai_sid = f'ai_{room}'
                 if game.is_game_over():
@@ -378,6 +179,7 @@ async def chat(sid, message):
                     # Send updated game state after AI move
                     game_state = game.get_game_state()
                     await socketio_server.emit('game_update', game_state, room=room)
+
 
 @socketio_server.event
 async def disconnect(sid):
@@ -394,6 +196,18 @@ async def disconnect(sid):
     if room:
         logger.info(f'{sid}: disconnected from {room}')
 
+def save_agents():
+    models['easy'].save('q_learning_agent.pkl')
+    models['medium'].save('dqn_agent.pkl')
+    models['hard'].save('mcts_agent.pkl')
+    logging.info("Agents saved.")
+
+def increment_game_counter():
+    global game_counter
+    game_counter += 1
+    if game_counter % SAVE_INTERVAL == 0:
+        save_agents()
+
 async def simulate_ai_connection(room):
     ai_sid = f'ai_{room}'
     rooms[room].add(ai_sid)
@@ -408,49 +222,114 @@ def generate_ai_response(game, room):
     difficulty = room.split('_')[0]  # Extract difficulty from room name
     model = models.get(difficulty, models['medium'])  # Default to medium if difficulty not found
 
-    if difficulty == 'easy' or difficulty == 'tutorial':
-        # Easy AI behavior
-        if game.is_game_over():
-            winner = game.get_winner()
-            return f"Game over! {game.player_names[winner]} wins!"
-        
-        if game.last_action_was_challenge or game.current_bid == (1, 1):
-            action = 'bid'  # Force bid after challenge or for the first move
-        else:
-            action = random.choice(['bid', 'challenge'])
-
-        # if current bid is 10 6s, challenge
-        if game.current_bid[0] == 10:
-            action = 'challenge'
-
-        if action == 'bid':
-            quantity, face_value = game.random_bid()
-            game.make_bid(2, quantity, face_value)  # Assuming player 2 is the AI
-            return f"Bid: {quantity} {face_value}s."
-        else:
-            result = game.challenge(2)
-            
-            if game.is_game_over():
-                winner = game.get_winner()
-                return f"Game over! {game.player_names[winner]} wins!"
-
-            return f"Challenge! {result}"
+    if difficulty == 'tutorial':
+        return handle_tutorial_mode(game)
     
     if game.is_game_over():
         winner = game.get_winner()
         return f"Game over! {game.player_names[winner]} wins!"
 
     state = game.get_game_state()
-    if difficulty == 'medium' or difficulty == 'hard':
-        action = model.get_action(state)
     
-    if action == 0:  # Bid
+    if isinstance(model, QLearningAgent) or isinstance(model, DQNAgent) or isinstance(model, MCTSAgent):
+        action = model.get_action(state)
+        action_type, quantity, face_value = action
+
+        if action_type == 0:  # Bid
+            valid_bid = game.make_bid(2, quantity, face_value)
+            if valid_bid:
+                return f"Bid: {quantity} {face_value}s."
+            else:
+                logging.error(f"Invalid action: {action}")
+                return "Invalid action"
+        elif action_type == 1:  # Challenge
+            result = game.challenge(2)
+            if game.is_game_over():
+                winner = game.get_winner()
+                return f"Game over! {game.player_names[winner]} wins!"
+            return f"Challenge! {result}"
+    else:
+        logging.error(f"Invalid model type: {type(model)}")
+        return "Invalid AI model type"
+
+
+def handle_tutorial_mode(game):
+    if game.is_game_over():
+        winner = game.get_winner()
+        return f"Game over! {game.player_names[winner]} wins!"
+
+    if game.last_action_was_challenge or game.current_bid == (1, 1):
+        action = 'bid'  # Force bid after challenge or for the first move
+    else:
+        action = random.choice(['bid', 'challenge'])
+
+    # if current bid is 10 6s, challenge
+    if game.current_bid[0] == 10:
+        action = 'challenge'
+
+    if action == 'bid':
         quantity, face_value = game.random_bid()
-        game.make_bid(2, quantity, face_value)
+        game.make_bid(2, quantity, face_value)  # Assuming player 2 is the AI
         return f"Bid: {quantity} {face_value}s."
-    else:  # Challenge
+    else:
         result = game.challenge(2)
+        
         if game.is_game_over():
             winner = game.get_winner()
             return f"Game over! {game.player_names[winner]} wins!"
+
         return f"Challenge! {result}"
+
+
+def get_dqn_action(agent, state):
+    action = agent.act(state)
+    logging.debug(f"DQNAgent selected action: {action}")
+    action_type = action // 66
+    quantity = (action % 66) // 6 + 1
+    face_value = action % 6 + 1
+    return action_type, quantity, face_value
+
+def get_sarsa_action(agent, state):
+    action = agent.get_action(state)
+    logging.debug(f"SARSAAgent selected action: {action}")
+    action_type = action // 66
+    quantity = (action % 66) // 6 + 1
+    face_value = action % 6 + 1
+    # Ensure the action is valid
+    if quantity > 10 or quantity < 1:
+        quantity = random.randint(1, 10)
+    if face_value > 6 or face_value < 1:
+        face_value = random.randint(1, 6)
+    return action_type, quantity, face_value
+
+def get_mcts_action(agent, state, game):
+    action = agent.select_action(state, game)
+    logging.debug(f"MCTSAgent selected action: {action}")
+    action_type = action // 66
+    quantity = (action % 66) // 6 + 1
+    face_value = action % 6 + 1
+    # Ensure the action is valid
+    if quantity > 10 or quantity < 1:
+        quantity = random.randint(1, 10)
+    if face_value > 6 or face_value < 1:
+        face_value = random.randint(1, 6)
+    return action_type, quantity, face_value
+
+def get_qlearning_action(agent, state):
+    state_key = agent.get_state_key(state)
+    valid_actions = agent.get_valid_actions(state)
+
+    if np.random.rand() <= agent.epsilon:
+        action = random.choice(valid_actions)
+    else:
+        q_values = agent.q_table[state_key]
+        action = np.argmax([q_values[a] if a in valid_actions else -np.inf for a in range(agent.action_size)])
+
+    # Decode the action into action_type, quantity, and face_value
+    action_type = action // 66
+    quantity = (action % 66) // 6 + 1
+    face_value = action % 6 + 1
+
+    logging.debug(f"Decoded action - Type: {action_type}, Quantity: {quantity}, Face Value: {face_value}")
+
+    return action_type, quantity, face_value
