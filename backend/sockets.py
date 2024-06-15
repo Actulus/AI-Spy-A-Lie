@@ -173,6 +173,8 @@ async def chat(sid, message):
                         {"sid": ai_sid, "message": f"Game over! Player {winner} wins!"},
                         room=room,
                     )
+                    increment_game_counter()
+                    return
                 else:
                     await asyncio.sleep(0.5)  # Adding delay before AI response
                     ai_message = generate_ai_response(game, room)
@@ -182,6 +184,15 @@ async def chat(sid, message):
                     # Send updated game state after AI move
                     game_state = game.get_game_state()
                     await socketio_server.emit("game_update", game_state, room=room)
+                    if game.is_game_over():
+                        winner = game.get_winner()
+                        await socketio_server.emit(
+                            "game_over",
+                            {"winner": game.player_names[winner]},
+                            room=room,
+                        )
+                        increment_game_counter()
+                        return
 
 
 @socketio_server.event
