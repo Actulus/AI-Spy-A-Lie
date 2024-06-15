@@ -234,30 +234,43 @@ def generate_ai_response(game, room):
 
     if isinstance(model, QLearningAgent):
         action = model.get_action(state)
-        action_type, quantity, face_value = decode_action(action)
-        logging.info(f"QLearningAgent action: {action} (Type: {action_type}, Quantity: {quantity}, Face Value: {face_value})")
-
-        while not is_valid_action(action_type, state):
-            action = model.get_valid_random_action(state)
-            action_type, quantity, face_value = decode_action(action)
-            logging.info(f"Reselected action: {action} (Type: {action_type}, Quantity: {quantity}, Face Value: {face_value})")
-
-        if action_type == 0:  # Bid
-            valid_bid = game.make_bid(2, quantity, face_value)
-            if valid_bid:
-                return f"Bid: {quantity} {face_value}s."
-            else:
-                logging.error(f"Invalid action: {action}")
-                return "Invalid action"
-        elif action_type == 1:  # Challenge
-            result = game.challenge(2)
-            if game.is_game_over():
-                winner = game.get_winner()
-                return f"Game over! {game.player_names[winner]} wins!"
-            return f"Challenge! {result}"
+    elif isinstance(model, DQNAgent):
+        state_sequence = (
+            tuple(state["dice_count"]) + 
+            tuple(state["current_bid"]) + 
+            tuple(state["scores"]) + 
+            (state["current_player"],)
+        )
+        action = model.act(state_sequence)
+        logging.info(f"DQNAgent raw action: {action}")
     else:
         logging.error(f"Invalid model type: {type(model)}")
         return "Invalid AI model type"
+
+    action_type, quantity, face_value = decode_action(action)
+    logging.info(f"{type(model).__name__} action: {action} (Type: {action_type}, Quantity: {quantity}, Face Value: {face_value})")
+
+    # Validate and reselect action if invalid
+    attempts = 0
+    while not is_valid_action(action_type, quantity, face_value, state) and attempts < 10:
+        action = model.get_valid_random_action(state)
+        action_type, quantity, face_value = decode_action(action)
+        logging.info(f"Reselected action: {action} (Type: {action_type}, Quantity: {quantity}, Face Value: {face_value})")
+        attempts += 1
+
+    if action_type == 0:  # Bid
+        valid_bid = game.make_bid(2, quantity, face_value)
+        if valid_bid:
+            return f"Bid: {quantity} {face_value}s."
+        else:
+            logging.error(f"Invalid action: {action}")
+            return "Invalid action"
+    elif action_type == 1:  # Challenge
+        result = game.challenge(2)
+        if game.is_game_over():
+            winner = game.get_winner()
+            return f"Game over! {game.player_names[winner]} wins!"
+        return f"Challenge! {result}"
 
 def decode_action(action):
     action_type = action // 66
@@ -265,11 +278,14 @@ def decode_action(action):
     face_value = action % 6 + 1
     return action_type, quantity, face_value
 
-def is_valid_action(action_type, state):
+def is_valid_action(action_type, quantity, face_value, state):
     if action_type == 1 and state["last_action_was_challenge"]:
         return False  # Invalid: challenge after a challenge
+    if action_type == 0:
+        current_quantity, current_face_value = state["current_bid"]
+        if quantity < current_quantity or (quantity == current_quantity and face_value <= current_face_value):
+            return False  # Invalid bid: must be higher than the current bid
     return True  # Valid otherwise
-
 
 
 def handle_tutorial_mode(game):
