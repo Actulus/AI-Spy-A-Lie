@@ -224,16 +224,23 @@ def generate_ai_response(game, room):
 
     if difficulty == 'tutorial':
         return handle_tutorial_mode(game)
-    
+
     if game.is_game_over():
         winner = game.get_winner()
         return f"Game over! {game.player_names[winner]} wins!"
 
     state = game.get_game_state()
-    
-    if isinstance(model, QLearningAgent) or isinstance(model, DQNAgent) or isinstance(model, MCTSAgent):
+    logging.info(f"Current game state: {state}")
+
+    if isinstance(model, QLearningAgent):
         action = model.get_action(state)
-        action_type, quantity, face_value = action
+        action_type, quantity, face_value = decode_action(action)
+        logging.info(f"QLearningAgent action: {action} (Type: {action_type}, Quantity: {quantity}, Face Value: {face_value})")
+
+        while not is_valid_action(action_type, state):
+            action = model.get_valid_random_action(state)
+            action_type, quantity, face_value = decode_action(action)
+            logging.info(f"Reselected action: {action} (Type: {action_type}, Quantity: {quantity}, Face Value: {face_value})")
 
         if action_type == 0:  # Bid
             valid_bid = game.make_bid(2, quantity, face_value)
@@ -251,6 +258,18 @@ def generate_ai_response(game, room):
     else:
         logging.error(f"Invalid model type: {type(model)}")
         return "Invalid AI model type"
+
+def decode_action(action):
+    action_type = action // 66
+    quantity = (action % 66) // 6 + 1
+    face_value = action % 6 + 1
+    return action_type, quantity, face_value
+
+def is_valid_action(action_type, state):
+    if action_type == 1 and state["last_action_was_challenge"]:
+        return False  # Invalid: challenge after a challenge
+    return True  # Valid otherwise
+
 
 
 def handle_tutorial_mode(game):
