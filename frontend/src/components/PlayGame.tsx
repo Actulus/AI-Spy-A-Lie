@@ -17,7 +17,7 @@ const PlayGamePage: React.FC = () => {
         Q-Learning 
       </Button>
       <Button onClick={() => handleGameButtonClick('medium')} name="play-button">
-        Deep Q Network
+        Deep Q-Network
       </Button>
       <Button onClick={() => handleGameButtonClick('hard')} name="play-button">
         Monte Carlo Tree Search
