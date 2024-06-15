@@ -71,7 +71,7 @@ const AnswerButtons = forwardRef<HTMLDivElement, AnswerButtonsProps>(
                 key={index}
                 onClick={() => setSelectedNumber(number)}
                 disabled={disableNumber(number)}
-                className={`m-2 p-2 ${selectedNumber === number ? 'bg-spring-green' : 'bg-nyanza'} ${disableNumber(number) ? 'opacity-50 cursor-not-allowed' : 'text-black'} rounded-lg`}
+                className={`text-2xl m-2 p-2 ${selectedNumber === number ? 'bg-spring-green' : 'bg-nyanza'} ${disableNumber(number) ? 'opacity-50 cursor-not-allowed' : 'text-black'} rounded-lg`}
               >
                 {number}
               </button>
@@ -86,7 +86,7 @@ const AnswerButtons = forwardRef<HTMLDivElement, AnswerButtonsProps>(
                 key={index}
                 onClick={() => setSelectedFace(face)}
                 disabled={disableFace(face)}
-                className={`m-2 p-2 ${selectedFace === face ? 'bg-spring-green' : 'bg-nyanza'} ${disableFace(face) ? 'opacity-50 cursor-not-allowed' : 'text-black'} rounded-lg`}
+                className={`text-2xl m-2 p-2 ${selectedFace === face ? 'bg-spring-green' : 'bg-nyanza'} ${disableFace(face) ? 'opacity-50 cursor-not-allowed' : 'text-black'} rounded-lg`}
               >
                 {face}
               </button>
@@ -97,14 +97,14 @@ const AnswerButtons = forwardRef<HTMLDivElement, AnswerButtonsProps>(
           <button
             onClick={handleBidSubmit}
             disabled={!selectedNumber || !selectedFace || disableFace(selectedFace)}
-            className={`p-2 bg-spring-green ${!selectedNumber || !selectedFace || disableFace(selectedFace) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-light-spring-green'} text-white font-bold rounded-lg`}
+            className={`text-2xl p-2 bg-spring-green ${!selectedNumber || !selectedFace || disableFace(selectedFace) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-light-spring-green'} text-white font-bold rounded-lg`}
           >
             Submit Bid
           </button>
           <button
             onClick={handleCallLiarSubmit}
             disabled={calledLiar.status}
-            className={`p-2 bg-carmine ${calledLiar.status ? 'opacity-50 cursor-not-allowed' : 'hover:bg-dark-red'} text-white font-bold rounded-lg`}
+            className={`text-2xl p-2 bg-carmine ${calledLiar.status ? 'opacity-50 cursor-not-allowed' : 'hover:bg-dark-red'} text-white font-bold rounded-lg`}
           >
             Challenge
           </button>
