@@ -14,13 +14,13 @@ const PlayGamePage: React.FC = () => {
     <div className="flex flex-col md:flex-row justify-center items-center">
       <Button onClick={() => handleGameButtonClick('tutorial')} name="play-button">Tutorial</Button>
       <Button onClick={() => handleGameButtonClick('easy')} name="play-button">
-        Easy
+        Q-Learning 
       </Button>
       <Button onClick={() => handleGameButtonClick('medium')} name="play-button">
-        Medium
+        Deep Q Network
       </Button>
       <Button onClick={() => handleGameButtonClick('hard')} name="play-button">
-        Hard
+        Monte Carlo Tree Search
       </Button>
     </div>
     </div>
