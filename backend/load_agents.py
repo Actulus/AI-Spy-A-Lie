@@ -20,7 +20,7 @@ class CustomUnpickler(pickle.Unpickler):
             return MCTSAgent
         return super().find_class(module, name)
 
-def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent.pkl', hard_filename='mcts_agent.pkl'):
+def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent.pkl', hard_filename='sarsa_agent.pkl'):
     with open(easy_filename, 'rb') as f:
         q_table_dict = CustomUnpickler(f).load()
         easy_agent = QLearningAgent(state_size=7, action_size=132)  # Adjust state_size and action_size accordingly
@@ -32,9 +32,8 @@ def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent
             medium_agent.network = DQNetwork(medium_agent.state_size, medium_agent.action_size)  # Ensure network is set
     
     with open(hard_filename, 'rb') as f:
-        hard_agent = CustomUnpickler(f).load()
+        q_table_dict = CustomUnpickler(f).load()
+        hard_agent = SARSAAgent(state_size=7, action_size=132)  # Adjust state_size and action_size accordingly
+        hard_agent.q_table = defaultdict(lambda: np.zeros(hard_agent.action_size), q_table_dict)
     
     return easy_agent, medium_agent, hard_agent
-
-# Example usage
-easy_agent, medium_agent, hard_agent = load_agents()

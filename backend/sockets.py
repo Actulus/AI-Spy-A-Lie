@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 easy_agent, medium_agent, hard_agent = load_agents(
     easy_filename="q_learning_agent.pkl",
     medium_filename="dqn_agent.pkl",
-    hard_filename="mcts_agent.pkl",
+    hard_filename="sarsa_agent.pkl",
 )
 
 # Initialize the models dictionary
@@ -232,7 +232,7 @@ def get_ai_model(difficulty):
 
 def generate_ai_response(game, room):
     difficulty = room.split('_')[0]  # Extract difficulty from room name
-    model = models.get(difficulty, models['tutorial'])  # Default to medium if difficulty not found
+    model = models.get(difficulty, models['tutorial'])  # Default to tutorial if difficulty not found
 
     if difficulty == 'tutorial':
         return handle_tutorial_mode(game)
@@ -255,12 +255,12 @@ def generate_ai_response(game, room):
         )
         action = model.act(state_sequence)
         logging.info(f"DQNAgent raw action: {action}")
-    elif isinstance(model, MCTSAgent):
-        action = model.select_action(state, game)
-        logging.info(f"MCTSAgent raw action: {action}")
     elif isinstance(model, SARSAAgent):
         action = model.get_action(state)
         logging.info(f"SARSAAgent raw action: {action}")
+    elif isinstance(model, MCTSAgent):
+        action = model.select_action(state, game)
+        logging.info(f"MCTSAgent raw action: {action}")
     else:
         logging.error(f"Invalid model type: {type(model)}")
         return "Invalid AI model type"
@@ -276,26 +276,38 @@ def generate_ai_response(game, room):
         logging.info(f"Reselected action: {action} (Type: {action_type}, Quantity: {quantity}, Face Value: {face_value})")
         attempts += 1
 
+    if not is_valid_action(action_type, quantity, face_value, state):
+        logging.error(f"Unable to find valid action after {attempts} attempts.")
+        return "Invalid action"
+
+    logging.info(f"Final action: {action} (Type: {action_type}, Quantity: {quantity}, Face Value: {face_value})")
+
     if action_type == 0:  # Bid
         valid_bid = game.make_bid(2, quantity, face_value)
         if valid_bid:
+            logging.info(f"Valid bid made: {quantity} {face_value}s.")
             return f"Bid: {quantity} {face_value}s."
         else:
-            logging.error(f"Invalid action: {action}")
+            logging.error(f"Invalid bid action: {action}")
             return "Invalid action"
     elif action_type == 1:  # Challenge
         result = game.challenge(2)
         if game.is_game_over():
             winner = game.get_winner()
+            logging.info(f"Game over! {game.player_names[winner]} wins!")
             return f"Game over! {game.player_names[winner]} wins!"
+        logging.info(f"Challenge result: {result}")
         return f"Challenge! {result}"
 
-def decode_action(action):
-    action_type = action // 66
-    quantity = (action % 66) // 6 + 1
-    face_value = action % 6 + 1
-    return action_type, quantity, face_value
 
+def decode_action(action):
+    if isinstance(action, tuple):
+        return action
+    else:
+        action_type = action // 66
+        quantity = (action % 66) // 6 + 1
+        face_value = action % 6 + 1
+        return action_type, quantity, face_value
 
 def is_valid_action(action_type, quantity, face_value, state):
     current_quantity, current_face_value = state["current_bid"]
@@ -313,6 +325,7 @@ def is_valid_action(action_type, quantity, face_value, state):
     elif action_type == 1:  # Challenge
         if state["last_action_was_challenge"]:
             return False
+        # Add additional conditions to prevent premature challenges if needed
     return True
 
 
