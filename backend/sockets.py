@@ -19,9 +19,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # Load the agents
 easy_agent, medium_agent, hard_agent = load_agents(
-    easy_filename="ai_models/q_learning_agent.pkl",
-    medium_filename="ai_models/dqn_agent.pkl",
-    hard_filename="ai_models/sarsa_agent.pkl",
+    easy_filename="./ai_models/q_learning_agent.pkl",
+    medium_filename="./ai_models/dqn_agent.pkl",
+    hard_filename="./ai_models/sarsa_agent.pkl",
 )
 
 # Initialize the models dictionary
@@ -199,9 +199,9 @@ async def disconnect(sid):
 
 
 def save_agents():
-    models["easy"].save("q_learning_agent.pkl")
-    models["medium"].save("dqn_agent.pkl")
-    models["hard"].save("dqn_agent.pkl")
+    models["easy"].save("./ai_models/q_learning_agent.pkl")
+    models["medium"].save("./ai_models/dqn_agent.pkl")
+    models["hard"].save("./ai_models/dqn_agent.pkl")
     logging.info("Agents saved.")
 
 

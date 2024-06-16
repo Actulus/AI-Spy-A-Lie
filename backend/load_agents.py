@@ -20,7 +20,7 @@ class CustomUnpickler(pickle.Unpickler):
             return MCTSAgent
         return super().find_class(module, name)
 
-def load_agents(easy_filename='ai_models/q_learning_agent.pkl', medium_filename='ai_models/dqn_agent.pkl', hard_filename='ai_models/sarsa_agent.pkl'):
+def load_agents(easy_filename='./ai_models/q_learning_agent.pkl', medium_filename='./ai_models/dqn_agent.pkl', hard_filename='./ai_models/sarsa_agent.pkl'):
     with open(easy_filename, 'rb') as f:
         q_table_dict = CustomUnpickler(f).load()
         easy_agent = QLearningAgent(state_size=7, action_size=132)  # Adjust state_size and action_size accordingly
