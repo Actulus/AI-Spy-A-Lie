@@ -3,6 +3,7 @@ import { ResponsiveLine } from '@nivo/line';
 import { ResponsivePie } from '@nivo/pie';
 import { ResponsiveBar } from '@nivo/bar';
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
+import Loading from './partials/Loading';
 
 interface StatisticsData {
     matches_per_day: Record<string, number>;
@@ -30,7 +31,7 @@ const Statistics = () => {
             .then(data => setData(data as StatisticsData));
     }, [kinde_uuid]);
 
-    if (!data) return <div>Loading...</div>;
+    if (!data) return <Loading />;
 
     const matchesPerDayData = Object.keys(data.matches_per_day).map(date => ({
         x: date,

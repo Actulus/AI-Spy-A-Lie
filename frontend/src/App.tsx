@@ -9,6 +9,7 @@ import PlayGamePage from "./components/PlayGame";
 import GamePage from "./components/Game";
 import Statistics from "./components/Statistics";
 import { useState, useEffect } from "react";
+import Loading from "./components/partials/Loading";
 
 function App() {
   const { isAuthenticated, isLoading } = useKindeAuth();
@@ -34,7 +35,7 @@ function App() {
   }, [user]);
 
   if (isLoading) {
-    return <div className="bg-gradient-to-b from-malachite to-dark-green min-h-screen min-w-screen">Loading...</div>;
+    return <Loading/>;
   }
 
   return (
