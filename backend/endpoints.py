@@ -6,7 +6,7 @@ from uuid import UUID
 from database import get_db
 from models import User, UserMatchHistory, AIMatchHistory, Match
 from datetime import datetime, timedelta
-from sqlalchemy import func
+from sqlalchemy import func, distinct, case
 
 router = APIRouter()
 
@@ -90,8 +90,9 @@ def get_statistics(request: Request, db: Session = Depends(get_db)):
             .group_by(func.date(Match.match_date))
             .all()
         )
-        matches_per_day_dict = {str(date): count for date, count in matches_per_day}
-        
+        matches_per_day_sorted = sorted(matches_per_day, key=lambda x: x[0])
+        matches_per_day_dict = {str(date): count for date, count in matches_per_day_sorted}
+
         # Average user score over the past month
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
@@ -102,7 +103,8 @@ def get_statistics(request: Request, db: Session = Depends(get_db)):
             .group_by(func.date(Match.match_date))
             .all()
         )
-        average_user_score = {str(date): avg_score for date, avg_score in average_user_score_data}
+        average_user_score_sorted = sorted(average_user_score_data, key=lambda x: x[0])
+        average_user_score = {str(date): avg_score for date, avg_score in average_user_score_sorted}
         
         # AI performance
         ai_performance_data = (
@@ -112,14 +114,70 @@ def get_statistics(request: Request, db: Session = Depends(get_db)):
         )
         ai_performance = {ai_type: {"average_score": avg_score, "matches_played": count} for ai_type, avg_score, count in ai_performance_data}
 
+        # User win rates
+        user_win_rates = db.query(
+            UserMatchHistory.user_kinde_uuid,
+            User.user_name,
+            func.count(Match.id).label('total_matches'),
+            func.sum(case((UserMatchHistory.score > AIMatchHistory.score, 1), else_=0)).label('wins')
+        ).join(User, User.kinde_uuid == UserMatchHistory.user_kinde_uuid
+        ).join(Match, Match.id == UserMatchHistory.match_id
+        ).join(AIMatchHistory, Match.id == AIMatchHistory.match_id
+        ).group_by(UserMatchHistory.user_kinde_uuid, User.user_name).all()
+
+        user_win_rates_dict = {
+            user_kinde_uuid: {
+                "user_name": user_name,
+                "total_matches": total,
+                "wins": wins,
+                "win_rate": (wins / total) * 100 if total > 0 else 0
+            }
+            for user_kinde_uuid, user_name, total, wins in user_win_rates
+        }
+
+        
+        # AI win rates
+        ai_win_rates = db.query(
+            AIMatchHistory.ai_type,
+            func.count(Match.id).label('total_matches'),
+            func.sum(case((AIMatchHistory.score > UserMatchHistory.score, 1), else_=0)).label('wins')
+        ).join(Match, Match.id == AIMatchHistory.match_id
+        ).join(UserMatchHistory, Match.id == UserMatchHistory.match_id
+        ).group_by(AIMatchHistory.ai_type).all()
+
+        ai_win_rates_dict = {
+            ai: {
+                "total_matches": total,
+                "wins": wins,
+                "win_rate": (wins / total) * 100 if total > 0 else 0
+            }
+            for ai, total, wins in ai_win_rates
+        }
+
+        # Score distribution
+        score_distribution = db.query(UserMatchHistory.score, AIMatchHistory.score).all()
+        score_distribution_list = [{"user_score": us, "ai_score": ais} for us, ais in score_distribution]
+
+        # Player activity
+        player_activity = (
+            db.query(func.date(Match.match_date), func.count(distinct(UserMatchHistory.user_kinde_uuid)))
+            .join(UserMatchHistory, Match.id == UserMatchHistory.match_id)
+            .group_by(func.date(Match.match_date))
+            .all()
+        )
+        player_activity_dict = {str(date): count for date, count in player_activity}
+
         return {
             "total_matches": total_matches,
             "matches_per_day": matches_per_day_dict,
             "average_user_score": average_user_score,
-            "ai_performance": ai_performance
+            "ai_performance": ai_performance,
+            "user_win_rates": user_win_rates_dict,
+            "ai_win_rates": ai_win_rates_dict,
+            "score_distribution": score_distribution_list,
+            "player_activity": player_activity_dict,
         }
     else:
-        # User is not an admin
         return {"message": "Statistics need admin permissions to view."}
     
 def update_user_total_score(kinde_uuid: str, score: int, db: Session = Depends(get_db)):

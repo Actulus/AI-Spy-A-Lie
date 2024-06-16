@@ -47,7 +47,9 @@ const HomePage: React.FC<HomePageProps> = ({ isAdmin }: { isAdmin: boolean }) =>
             .then(response => response.json())
             .then((data: HighscoreResponse[]) => {
                 const players = data.map((player: HighscoreResponse) => ({
-                    name: player.user_name,
+                    // name: player.user_name,
+                    // split the username at spaces and join the first character of each word in uppercase
+                    name: player.user_name.split(' ').map((word) => word[0].toUpperCase()).join(''),
                     score: player.user_total_score,
                     profile: player.profile_picture,
                 }));
