@@ -3,10 +3,10 @@ import socketio
 import uuid
 import logging
 import asyncio
-from q_learning_agent import QLearningAgent
-from mcts_agent import MCTSAgent
-from sarsa_agent import SARSAAgent
-from dqn_agent import DQNAgent
+from ai_models.q_learning_agent import QLearningAgent
+from ai_models.mcts_agent import MCTSAgent
+from ai_models.sarsa_agent import SARSAAgent
+from ai_models.dqn_agent import DQNAgent
 from load_agents import load_agents
 from liars_dice_game_logic import LiarDiceGame
 import sys
@@ -19,9 +19,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # Load the agents
 easy_agent, medium_agent, hard_agent = load_agents(
-    easy_filename="q_learning_agent.pkl",
-    medium_filename="dqn_agent.pkl",
-    hard_filename="sarsa_agent.pkl",
+    easy_filename="ai_models/q_learning_agent.pkl",
+    medium_filename="ai_models/dqn_agent.pkl",
+    hard_filename="ai_models/sarsa_agent.pkl",
 )
 
 # Initialize the models dictionary
