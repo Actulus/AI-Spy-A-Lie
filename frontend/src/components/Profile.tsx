@@ -62,7 +62,7 @@ const ProfilePage: React.FC = () => {
 
     return (
         <div className='bg-spring-green w-fit m-5 p-5 rounded flex flex-col flex-grow place-self-center'>
-            <img src={user?.picture ? user.picture : '/cat_pfp.png'} className='w-20 h-20' />
+            <img src={user?.picture ? user.picture :  "https://ui-avatars.com/api/?name="+user?.family_name + "+" + user?.given_name} className='w-20 h-20' />
             <div className='flex gap-1 items-end'>
                 <p className="md:text-4xl text-pakistan-green font-keania-one">Name:</p>
                 <p className='md:text-3xl text-dark-spring-green font-roboto'>{user?.family_name} {user?.given_name}</p>

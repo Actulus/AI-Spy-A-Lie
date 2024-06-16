@@ -110,7 +110,7 @@ const HomePage: React.FC<HomePageProps> = ({ isAdmin }: { isAdmin: boolean }) =>
                 </div>
                 <ul className='flex flex-col gap-3 mt-2'>
                     {TopPlayers.slice(0, 10).map((player, index) => (
-                        <StatisticsPlayer key={index} name={player.name ? player.name : "Player"} score={player.score} profile={player.profile ? player.profile : '/cat_pfp.png'} />
+                        <StatisticsPlayer key={index} name={player.name ? player.name : "Player"} score={player.score} profile={player.profile ? player.profile :  "https://ui-avatars.com/api/?name="+player.name} />
                     ))}
                 </ul>
             </div>

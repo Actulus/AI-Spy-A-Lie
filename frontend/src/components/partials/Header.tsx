@@ -22,7 +22,7 @@ const Header: React.FC = () => {
             <img src="/logo.png" alt="AI Spy A Lie Logo" onClick={handleLogoClicked} className='w-16 h-16 rounded-full drop-shadow-lg' />
             <div className="flex">
                 <Button name='logout-button' onClick={logout}>Logout</Button>
-                <img src={user?.picture || "/cat_pfp.png"} alt="Cat Profile Picture" onClick={handlePfpClicked} className='w-16 h-16 rounded-full drop-shadow-lg' />
+                <img src={user?.picture ||  "https://ui-avatars.com/api/?name="+user?.family_name + "+" + user?.given_name} alt="Cat Profile Picture" onClick={handlePfpClicked} className='w-16 h-16 rounded-full drop-shadow-lg' />
             </div>
         </header>
     )

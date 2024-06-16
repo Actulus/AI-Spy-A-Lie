@@ -27,7 +27,7 @@ const GamePage: React.FC = () => {
 
   const userName = `${user?.given_name} ${user?.family_name}`;
   const aiName = `${difficulty?.charAt(0).toUpperCase() + difficulty!.slice(1)}AI`;
-  const userPic = user?.picture || "/cat_pfp.png";
+  const userPic = user?.picture || "https://ui-avatars.com/api/?name="+userName;
   const aiPic = '/AI_Pic.png';
 
   const [isConnected, setIsConnected] = useState<boolean>(false);
