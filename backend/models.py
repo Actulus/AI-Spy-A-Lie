@@ -33,7 +33,7 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    kinde_uuid = Column(String, nullable=False)
+    kinde_uuid = Column(String, nullable=False, unique=True)
     profile_picture = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)
     user_name = Column(String, nullable=False)

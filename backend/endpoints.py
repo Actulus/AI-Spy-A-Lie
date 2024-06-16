@@ -1,18 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List, Dict, Any 
+from typing import List, Dict, Any, Optional
 from uuid import UUID
 from database import get_db
 from models import User, UserMatchHistory, AIMatchHistory, Match
 from datetime import datetime, timedelta
 from sqlalchemy import func, distinct, case
+import asyncio
 
 router = APIRouter()
 
 class UserCreate(BaseModel):
     kinde_uuid: str
-    profile_picture: str
+    profile_picture: Optional[str] = None
     user_name: str
 
 
@@ -224,21 +225,36 @@ def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/user", response_model=UserResponse)
-def create_or_get_user(user: UserCreate, db: Session = Depends(get_db)):
+async def create_or_get_user(user: UserCreate, db: Session = Depends(get_db)):
+    await asyncio.sleep(1)
     db_user = db.query(User).filter(User.kinde_uuid == user.kinde_uuid).first()
     if db_user:
         return db_user
     else:
-        new_user = User(
-            kinde_uuid=user.kinde_uuid,
-            profile_picture=user.profile_picture,
-            user_name=user.user_name
-        )
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        return new_user
+        user_pfp = user.profile_picture
+        if not user.profile_picture or user.profile_picture == "":
+            user_pfp = "https://ui-avatars.com/api/?name=" + user.user_name
+            new_user = User(
+                kinde_uuid=user.kinde_uuid,
+                profile_picture=user_pfp,
+                user_name=user.user_name
+            )
 
+        # Second check to make sure the user wasn't created while waiting for the database to respond
+        db_user = db.query(User).filter(User.kinde_uuid == user.kinde_uuid).first()
+        if db_user:
+            return db_user
+            
+        try:
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+
+            return new_user
+        except Exception as e:
+            print("Error creating user, already exists")
+        
+        
 @router.get("/users/leaderboard", response_model=List[UserResponse])
 def get_leaderboard(db: Session = Depends(get_db)):
     leaderboard = db.query(User).order_by(User.user_total_score.desc()).limit(10).all()
