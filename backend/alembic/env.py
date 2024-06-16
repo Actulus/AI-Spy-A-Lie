@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-db_url = os.getenv("DEVELOPMENT_DATABASE_URL")
+# db_url = os.getenv("DEVELOPMENT_DATABASE_URL")
+db_url = os.getenv("PRODUCTION_DATABASE_URL")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
