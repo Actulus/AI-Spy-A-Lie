@@ -15,7 +15,7 @@ class SARSAAgent:
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
 
     def get_action(self, state):
         if np.random.rand() <= self.epsilon:
