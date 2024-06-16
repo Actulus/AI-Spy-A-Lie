@@ -70,9 +70,6 @@ def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent
             if not hasattr(medium_agent, 'network') or medium_agent.network is None:
                 logging.debug("Initializing DQNetwork for medium agent")
                 medium_agent.network = DQNetwork(medium_agent.state_size, medium_agent.action_size)
-                logging.debug("Loading state dict for medium agent's network")
-                state_dict = torch.load(f, map_location='cpu')
-                medium_agent.network.load_state_dict(state_dict)
             else:
                 logging.debug(f"Medium agent's network is already initialized: {medium_agent.network}")
     except Exception as e:
