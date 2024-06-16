@@ -27,9 +27,11 @@ def load_agents(easy_filename='ai_models/q_learning_agent.pkl', medium_filename=
         easy_agent.q_table = defaultdict(lambda: np.zeros(easy_agent.action_size), q_table_dict)
     
     with open(medium_filename, 'rb') as f:
-        medium_agent = CustomUnpickler(f).load()
-        if not hasattr(medium_agent, 'network') or medium_agent.network is None:
-            medium_agent.network = DQNetwork(medium_agent.state_size, medium_agent.action_size)  # Ensure network is set
+        medium_agent_state = CustomUnpickler(f).load()
+        if isinstance(medium_agent_state, dict):
+            state_size = medium_agent_state['state_size']
+            action_size = medium_agent_state['action_size']
+            medium_agent = DQNAgent(state_size, action_size)
     
     with open(hard_filename, 'rb') as f:
         q_table_dict = CustomUnpickler(f).load()

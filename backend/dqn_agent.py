@@ -20,7 +20,7 @@ class DQNetwork(nn.Module):
         return self.fc3(x)
 
 class DQNAgent:
-    def __init__(self, state_size, action_size, network=None, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.01, gamma=0.99, batch_size=32, memory_size=1000, target_update_freq=10):
+    def __init__(self, state_size, action_size, network=None, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.01, gamma=0.99, batch_size=32, memory_size=1000):
         self.state_size = state_size
         self.action_size = action_size
         self.epsilon = epsilon
@@ -29,16 +29,12 @@ class DQNAgent:
         self.gamma = gamma
         self.batch_size = batch_size
         self.memory = deque(maxlen=memory_size)
-        self.target_update_freq = target_update_freq
         self.update_counter = 0
 
         if network:
             self.network = network
         else:
             self.network = DQNetwork(state_size, action_size)
-        
-        self.target_network = DQNetwork(state_size, action_size)
-        self.update_target_network()
 
         self.optimizer = optim.Adam(self.network.parameters(), lr=0.001)
         self.criterion = nn.MSELoss()
@@ -82,9 +78,6 @@ class DQNAgent:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-    def update_target_network(self):
-        self.target_network.load_state_dict(self.network.state_dict())
-
     def remember(self, state, action, reward, next_state, done):
         state = np.array(list(state["dice_count"]) + list(state["current_bid"]) + list(state["scores"]) + [state["current_player"]])
         next_state = np.array(list(next_state["dice_count"]) + list(next_state["current_bid"]) + list(next_state["scores"]) + [next_state["current_player"]])
@@ -98,28 +91,62 @@ class DQNAgent:
             target = reward
             if not done:
                 next_state = torch.FloatTensor(next_state).unsqueeze(0)
-                target = reward + self.gamma * torch.max(self.target_network(next_state)[0]).item()
+                target = reward + self.gamma * torch.max(self.network(next_state)[0]).item()
             target_f = self.network(torch.FloatTensor(state).unsqueeze(0))
             target_f = target_f.cpu().detach().numpy()
             target_f[0][action] = target
             target_f = torch.FloatTensor(target_f)
-            state = torch.FloatTensor(state).unsqueeze(0)
+            state = torch.FloatFloat(state).unsqueeze(0)
             output = self.network(state)
             loss = self.criterion(output, target_f)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-        
-        self.update_counter += 1
-        if self.update_counter % self.target_update_freq == 0:
-            self.update_target_network()
+
         self.update_epsilon()
 
     def save(self, filename):
         with open(filename, 'wb') as f:
-            pickle.dump(self, f)
+            pickle.dump({
+                'state_size': self.state_size,
+                'action_size': self.action_size,
+                'gamma': self.gamma,
+                'epsilon': self.epsilon,
+                'epsilon_decay': self.epsilon_decay,
+                'epsilon_min': self.epsilon_min,
+                'batch_size': self.batch_size,
+                'memory': list(self.memory),
+                'network_state': self.network.state_dict(),
+                'optimizer_state': self.optimizer.state_dict(),
+            }, f)
 
-    @staticmethod
-    def load(filename):
+    def load(self, filename):
         with open(filename, 'rb') as f:
-            return pickle.load(f)
+            checkpoint = pickle.load(f)
+            self.state_size = checkpoint['state_size']
+            self.action_size = checkpoint['action_size']
+            self.gamma = checkpoint['gamma']
+            self.epsilon = checkpoint['epsilon']
+            self.epsilon_decay = checkpoint['epsilon_decay']
+            self.epsilon_min = checkpoint['epsilon_min']
+            self.batch_size = checkpoint['batch_size']
+            self.memory = deque(checkpoint['memory'], maxlen=1000)
+            self.network = DQNetwork(self.state_size, self.action_size)
+            self.network.load_state_dict(checkpoint['network_state'])
+            self.optimizer = optim.Adam(self.network.parameters(), lr=0.001)
+            self.optimizer.load_state_dict(checkpoint['optimizer_state'])
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['network_state'] = self.network.state_dict()
+        state['optimizer_state'] = self.optimizer.state_dict()
+        del state['network']
+        del state['optimizer']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.network = DQNetwork(self.state_size, self.action_size)
+        self.optimizer = optim.Adam(self.network.parameters(), lr=0.001)
+        self.network.load_state_dict(state['network_state'])
+        self.optimizer.load_state_dict(state['optimizer_state'])
