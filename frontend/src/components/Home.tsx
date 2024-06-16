@@ -98,6 +98,13 @@ const HomePage: React.FC<HomePageProps> = ({ isAdmin }: { isAdmin: boolean }) =>
                                 <p className='text-dark-spring-green'>The game continues until only one player has dice left. That player wins the game.</p>
                             </div>
                         </li>
+                        <li className='flex items-center'>
+                            <img src='/joker.svg' className='h-12 w-12 mr-3 place-self-start' />
+                            <div>
+                                <p>3</p>
+                                <p className='text-dark-spring-green'>The number 1 acts as a joker, meaning it can be used as any number.</p>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </div>
