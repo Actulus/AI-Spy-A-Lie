@@ -120,8 +120,6 @@ class DQNAgent:
             pickle.dump(self, f)
 
     @staticmethod
-    def load(self, filename):
-        # with open(filename, 'rb') as f:
-        #     return pickle.load(f)
-        self.model.load_state_dict(torch.load(filename))
-        self.update_target_model()
+    def load(filename):
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
