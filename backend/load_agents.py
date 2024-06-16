@@ -7,10 +7,13 @@ import numpy as np
 from collections import defaultdict
 import logging
 import os
+import torch
+
+logging.basicConfig(level=logging.DEBUG)
 
 class CustomUnpickler(pickle.Unpickler):
     def __init__(self, *args, map_location='cpu', **kwargs):
-        self._map_location = 'cpu'
+        self._map_location = map_location
         super().__init__(*args, **kwargs)
 
     def find_class(self, module, name):
@@ -25,6 +28,17 @@ class CustomUnpickler(pickle.Unpickler):
         if name == 'MCTSAgent':
             return MCTSAgent
         return super().find_class(module, name)
+
+    def persistent_load(self, saved_id):
+        # Override to handle loading objects on CPU
+        if isinstance(saved_id, tuple):
+            if saved_id[0] == 'storage':
+                storage_type, key, location, storage_view, numel = saved_id
+                if storage_type == 'cpu':
+                    return torch.Storage._new_shared_cpu_storage(numel)
+                else:
+                    raise RuntimeError(f"Unknown storage type: {storage_type}")
+        return super().persistent_load(saved_id)
 
 def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent.pkl', hard_filename='sarsa_agent.pkl'):
     logging.debug(f"Checking if file exists: {easy_filename}, {medium_filename}, {hard_filename}")
@@ -42,29 +56,38 @@ def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent
 
     try:
         with open(easy_filename, 'rb') as f:
-            q_table_dict = CustomUnpickler(f).load()
+            q_table_dict = CustomUnpickler(f, map_location='cpu').load()
             easy_agent = QLearningAgent(state_size=7, action_size=132)
             easy_agent.q_table = defaultdict(lambda: np.zeros(easy_agent.action_size), q_table_dict)
-    except Exception as _:
+    except Exception as e:
         logging.exception(f"Failed to load easy_agent from {easy_filename}")
         raise
 
     try:
         with open(medium_filename, 'rb') as f:
-            medium_agent = CustomUnpickler(f).load()
+            medium_agent = CustomUnpickler(f, map_location='cpu').load()
             if not hasattr(medium_agent, 'network') or medium_agent.network is None:
                 medium_agent.network = DQNetwork(medium_agent.state_size, medium_agent.action_size)
-    except Exception as _:
+    except Exception as e:
         logging.exception(f"Failed to load medium_agent from {medium_filename}")
         raise
 
     try:
         with open(hard_filename, 'rb') as f:
-            q_table_dict = CustomUnpickler(f).load()
+            q_table_dict = CustomUnpickler(f, map_location='cpu').load()
             hard_agent = SARSAAgent(state_size=7, action_size=132)
             hard_agent.q_table = defaultdict(lambda: np.zeros(hard_agent.action_size), q_table_dict)
-    except Exception as _:
+    except Exception as e:
         logging.exception(f"Failed to load hard_agent from {hard_filename}")
         raise
 
     return easy_agent, medium_agent, hard_agent
+
+# Check current working directory
+logging.debug(f"Current working directory: {os.getcwd()}")
+
+try:
+    easy_agent, medium_agent, hard_agent = load_agents()
+except Exception as e:
+    logging.exception("Failed to load agents")
+    raise
