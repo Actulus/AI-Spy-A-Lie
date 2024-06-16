@@ -81,7 +81,7 @@ def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent
             logging.debug("Loading hard agent from SARSA agent file")
             q_table_dict = CustomUnpickler(f, map_location='cpu').load()
             hard_agent = SARSAAgent(state_size=7, action_size=132)
-            # Handle nested dictionaries and convert them to tensors
+            logging.debug("Converting q_table_dict items to tensors for hard agent")
             hard_agent.q_table = defaultdict(lambda: torch.zeros(hard_agent.action_size, device=hard_agent.device),
                                              {k: (torch.tensor(v, device=hard_agent.device) if not isinstance(v, dict) else
                                                   {sub_k: torch.tensor(sub_v, device=hard_agent.device) for sub_k, sub_v in v.items()})
@@ -98,6 +98,7 @@ logging.debug(f"Current working directory: {os.getcwd()}")
 
 try:
     easy_agent, medium_agent, hard_agent = load_agents()
+    logging.debug("Agents loaded successfully")
 except Exception as e:
     logging.exception("Failed to load agents")
     raise
