@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, forwardRef } from 'react';
+import { useState, useEffect, useMemo, forwardRef } from 'react';
 
 interface AnswerButtonsProps {
   onClick: (action: { type: string; quantity?: number; faceValue?: number }) => void;
