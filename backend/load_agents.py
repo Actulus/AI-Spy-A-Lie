@@ -9,6 +9,10 @@ import logging
 import os
 
 class CustomUnpickler(pickle.Unpickler):
+    def __init__(self, *args, map_location='cpu', **kwargs):
+        self._map_location = map_location
+        super().__init__(*args, **kwargs)
+
     def find_class(self, module, name):
         if name == 'QLearningAgent':
             return QLearningAgent
@@ -41,7 +45,7 @@ def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent
             q_table_dict = CustomUnpickler(f).load()
             easy_agent = QLearningAgent(state_size=7, action_size=132)
             easy_agent.q_table = defaultdict(lambda: np.zeros(easy_agent.action_size), q_table_dict)
-    except Exception as e:
+    except Exception as _:
         logging.exception(f"Failed to load easy_agent from {easy_filename}")
         raise
 
@@ -50,7 +54,7 @@ def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent
             medium_agent = CustomUnpickler(f).load()
             if not hasattr(medium_agent, 'network') or medium_agent.network is None:
                 medium_agent.network = DQNetwork(medium_agent.state_size, medium_agent.action_size)
-    except Exception as e:
+    except Exception as _:
         logging.exception(f"Failed to load medium_agent from {medium_filename}")
         raise
 
@@ -59,7 +63,7 @@ def load_agents(easy_filename='q_learning_agent.pkl', medium_filename='dqn_agent
             q_table_dict = CustomUnpickler(f).load()
             hard_agent = SARSAAgent(state_size=7, action_size=132)
             hard_agent.q_table = defaultdict(lambda: np.zeros(hard_agent.action_size), q_table_dict)
-    except Exception as e:
+    except Exception as _:
         logging.exception(f"Failed to load hard_agent from {hard_filename}")
         raise
 
