@@ -68,9 +68,14 @@ class SARSAAgent:
         with open(filename, 'wb') as f:
             pickle.dump(dict(self.q_table), f)
 
+    # def load(self, filename):
+    #     with open(filename, 'rb') as f:
+    #         self.q_table = defaultdict(lambda: np.zeros(self.action_size), pickle.load(f))
+
     def load(self, filename):
         with open(filename, 'rb') as f:
-            self.q_table = defaultdict(lambda: np.zeros(self.action_size), pickle.load(f))
+            self.q_table = defaultdict(lambda: torch.zeros(self.action_size, device=self.device),
+                                        {k: torch.tensor(v, device=self.device) for k, v in pickle.load(f).items()})
 
     def get_state_key(self, state):
         return tuple(list(state["dice_count"]) + list(state["current_bid"]) + list(state["scores"]) + [state["current_player"]])
