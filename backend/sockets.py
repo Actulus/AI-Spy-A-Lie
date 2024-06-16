@@ -14,7 +14,7 @@ import sys
 import os
 
 game_counter = 0
-SAVE_INTERVAL = 10  # Adjust this value as needed
+SAVE_INTERVAL = 10 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -32,18 +32,6 @@ models = {
     "medium": medium_agent,
     "hard": hard_agent,
 }
-
-# print easy model to "easy_model.txt"
-with open("easy_model.txt", "w") as f:
-    f.write(str(models["easy"]))
-
-# print medium model to "medium_model.txt"
-with open("medium_model.txt", "w") as f:
-    f.write(str(models["medium"]))
-
-# print hard model to "hard_model.txt"
-with open("hard_model.txt", "w") as f:
-    f.write(str(models["hard"]))
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -127,7 +115,7 @@ async def chat(sid, message):
                 face_value = int(face_value)
                 success = game.make_bid(
                     1, quantity, face_value
-                )  # Assuming player 1 is the user
+                )  # player 1 is the user
 
                 if success:
                     user_message = f"Bid: {quantity} {face_value}s."
@@ -237,8 +225,8 @@ async def simulate_ai_connection(room):
 
 def get_ai_model(difficulty):
     return models.get(
-        difficulty, models["medium"]
-    )  # Default to medium if difficulty not found
+        difficulty, models["tutorial"]
+    )  # Default to tutorial if difficulty not found
 
 
 def generate_ai_response(game, room):
@@ -336,7 +324,6 @@ def is_valid_action(action_type, quantity, face_value, state):
     elif action_type == 1:  # Challenge
         if state["last_action_was_challenge"]:
             return False
-        # Add additional conditions to prevent premature challenges if needed
     return True
 
 
@@ -356,7 +343,7 @@ def handle_tutorial_mode(game):
 
     if action == "bid":
         quantity, face_value = game.random_bid()
-        game.make_bid(2, quantity, face_value)  # Assuming player 2 is the AI
+        game.make_bid(2, quantity, face_value)  # player 2 is the AI
         return f"Bid: {quantity} {face_value}s."
     else:
         result = game.challenge(2)
@@ -366,57 +353,3 @@ def handle_tutorial_mode(game):
             return f"Game over! {game.player_names[winner]} wins!"
 
         return f"Challenge! {result}"
-
-
-# def get_dqn_action(agent, state):
-#     action = agent.act(state)
-#     logging.debug(f"DQNAgent selected action: {action}")
-#     action_type = action // 66
-#     quantity = (action % 66) // 6 + 1
-#     face_value = action % 6 + 1
-#     return action_type, quantity, face_value
-
-# def get_sarsa_action(agent, state):
-#     action = agent.get_action(state)
-#     logging.debug(f"SARSAAgent selected action: {action}")
-#     action_type = action // 66
-#     quantity = (action % 66) // 6 + 1
-#     face_value = action % 6 + 1
-#     # Ensure the action is valid
-#     if quantity > 10 or quantity < 1:
-#         quantity = random.randint(1, 10)
-#     if face_value > 6 or face_value < 1:
-#         face_value = random.randint(1, 6)
-#     return action_type, quantity, face_value
-
-# def get_mcts_action(agent, state, game):
-#     action = agent.select_action(state, game)
-#     logging.debug(f"MCTSAgent selected action: {action}")
-#     action_type = action // 66
-#     quantity = (action % 66) // 6 + 1
-#     face_value = action % 6 + 1
-#     # Ensure the action is valid
-#     if quantity > 10 or quantity < 1:
-#         quantity = random.randint(1, 10)
-#     if face_value > 6 or face_value < 1:
-#         face_value = random.randint(1, 6)
-#     return action_type, quantity, face_value
-
-# def get_qlearning_action(agent, state):
-#     state_key = agent.get_state_key(state)
-#     valid_actions = agent.get_valid_actions(state)
-
-#     if np.random.rand() <= agent.epsilon:
-#         action = random.choice(valid_actions)
-#     else:
-#         q_values = agent.q_table[state_key]
-#         action = np.argmax([q_values[a] if a in valid_actions else -np.inf for a in range(agent.action_size)])
-
-#     # Decode the action into action_type, quantity, and face_value
-#     action_type = action // 66
-#     quantity = (action % 66) // 6 + 1
-#     face_value = action % 6 + 1
-
-#     logging.debug(f"Decoded action - Type: {action_type}, Quantity: {quantity}, Face Value: {face_value}")
-
-#     return action_type, quantity, face_value

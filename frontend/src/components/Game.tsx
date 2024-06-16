@@ -194,9 +194,6 @@ const GamePage: React.FC = () => {
       await socket.current.disconnect();
     }
 
-    // Clear previous socket instance
-    // socket.current = null;
-
     // Establish a new socket connection after a short delay
     setTimeout(() => {
       const socketInstance = io(import.meta.env.VITE_BACKEND_URL, {
@@ -254,7 +251,6 @@ const GamePage: React.FC = () => {
 
 
   const handleGoHome = () => {
-    // Redirect to home page
     window.location.href = '/home';
   };
 

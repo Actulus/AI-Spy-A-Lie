@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 
 const RolledDiceFaces = forwardRef<HTMLDivElement, { user: string; rolledDice: string[]; }>(
   ({ user, rolledDice}, ref) => {

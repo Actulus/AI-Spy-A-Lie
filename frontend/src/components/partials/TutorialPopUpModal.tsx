@@ -27,25 +27,25 @@ const TutorialPopUpModal: React.FC<TutorialPopUpModalProps> = ({
 }) => {
   const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties>({});
 
-  const calculateHighlightStyle = () => {
-    if (highlightRef.current) {
-      const rect = highlightRef.current.getBoundingClientRect();
-      const style = window.getComputedStyle(highlightRef.current);
-      const marginTop = parseFloat(style.marginTop);
-      const marginLeft = parseFloat(style.marginLeft);
-      const marginRight = parseFloat(style.marginRight);
-      const marginBottom = parseFloat(style.marginBottom);
-
-      setHighlightStyle({
-        top: rect.top - marginTop,
-        left: rect.left - marginLeft,
-        width: rect.width + marginLeft + marginRight,
-        height: rect.height + marginTop + marginBottom,
-      });
-    }
-  };
-
   useLayoutEffect(() => {
+    const calculateHighlightStyle = () => {
+      if (highlightRef.current) {
+        const rect = highlightRef.current.getBoundingClientRect();
+        const style = window.getComputedStyle(highlightRef.current);
+        const marginTop = parseFloat(style.marginTop);
+        const marginLeft = parseFloat(style.marginLeft);
+        const marginRight = parseFloat(style.marginRight);
+        const marginBottom = parseFloat(style.marginBottom);
+
+        setHighlightStyle({
+          top: rect.top - marginTop,
+          left: rect.left - marginLeft,
+          width: rect.width + marginLeft + marginRight,
+          height: rect.height + marginTop + marginBottom,
+        });
+      }
+    };
+
     // Use a timeout to allow the element to be fully rendered before measuring
     const timer = setTimeout(calculateHighlightStyle, 100);
 

@@ -73,7 +73,7 @@ class Node:
         total_dice = sum(state["dice_count"])
         current_quantity, current_face_value = state["current_bid"]
 
-        for action in range(2 * 11 * 6):  # Assuming 2 action types, 11 quantities, 6 face values
+        for action in range(2 * 10 * 6):  # Assuming 2 action types, 10 quantities, 6 face values
             action_type, quantity, face_value = decode_action(action)
             if action_type == 0:  # Bid
                 if 1 <= quantity <= total_dice and 1 <= face_value <= 6:
@@ -90,8 +90,8 @@ def decode_action(action):
     if isinstance(action, tuple):
         return action
     else:
-        action_type = action // 66
-        quantity = (action % 66) // 6 + 1
+        action_type = action // 60 
+        quantity = (action % 60) // 6 + 1  
         face_value = action % 6 + 1
         return action_type, quantity, face_value
 

@@ -14,7 +14,6 @@ const LoginPage: React.FC = () => {
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        // Perform login logic here
     };
 
     return (

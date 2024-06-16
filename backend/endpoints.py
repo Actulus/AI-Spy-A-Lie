@@ -27,10 +27,6 @@ class UserResponse(BaseModel):
     updated_at: datetime
     is_deleted: bool
 
-    # class Config:
-    #     orm_mode = True
-    
-
 class OpponentResponse(BaseModel):
     user_name: str
     score: int
@@ -105,7 +101,7 @@ def get_statistics(request: Request, db: Session = Depends(get_db)):
         )
         average_user_score_sorted = sorted(average_user_score_data, key=lambda x: x[0])
         average_user_score = {str(date): avg_score for date, avg_score in average_user_score_sorted}
-        
+
         # AI performance
         ai_performance_data = (
             db.query(AIMatchHistory.ai_type, func.avg(AIMatchHistory.score), func.count(AIMatchHistory.id))
@@ -188,10 +184,7 @@ def update_user_total_score(kinde_uuid: str, score: int, db: Session = Depends(g
     return db_user
 
 @router.post("/match", response_model=MatchResponse)
-def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):
-    # log the match data
-    print(match_data)
-    
+def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):   
     # Create a new match with the current date and socket ID
     new_match = Match(
         match_date=datetime.now(),

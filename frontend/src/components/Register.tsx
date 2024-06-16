@@ -14,9 +14,6 @@ const RegisterPage: React.FC = () => {
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        // Perform registration logic here
-        console.log('Registering user:', username);
-        console.log('Password:', password);
     };
 
     return (
