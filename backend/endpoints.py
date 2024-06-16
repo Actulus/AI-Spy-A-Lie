@@ -234,25 +234,25 @@ async def create_or_get_user(user: UserCreate, db: Session = Depends(get_db)):
         user_pfp = user.profile_picture
         if not user.profile_picture or user.profile_picture == "":
             user_pfp = "https://ui-avatars.com/api/?name=" + user.user_name
-            new_user = User(
-                kinde_uuid=user.kinde_uuid,
-                profile_picture=user_pfp,
-                user_name=user.user_name
-            )
+        
+        new_user = User(
+            kinde_uuid=user.kinde_uuid,
+            profile_picture=user_pfp,
+            user_name=user.user_name
+        )
 
         # Second check to make sure the user wasn't created while waiting for the database to respond
         db_user = db.query(User).filter(User.kinde_uuid == user.kinde_uuid).first()
         if db_user:
             return db_user
-            
         try:
             db.add(new_user)
             db.commit()
             db.refresh(new_user)
-
-            return new_user
         except Exception as e:
-            print("Error creating user, already exists")
+            print("Error creating user, already exists.")
+
+        return new_user
         
         
 @router.get("/users/leaderboard", response_model=List[UserResponse])
