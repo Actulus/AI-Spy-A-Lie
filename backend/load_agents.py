@@ -10,7 +10,7 @@ import os
 
 class CustomUnpickler(pickle.Unpickler):
     def __init__(self, *args, map_location='cpu', **kwargs):
-        self._map_location = map_location
+        self._map_location = 'cpu'
         super().__init__(*args, **kwargs)
 
     def find_class(self, module, name):
