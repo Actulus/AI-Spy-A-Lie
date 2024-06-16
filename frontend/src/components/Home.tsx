@@ -78,30 +78,30 @@ const HomePage: React.FC<HomePageProps> = ({ isAdmin }: { isAdmin: boolean }) =>
                     <p className='text-pakistan-green text-shadow-sm shadow-dark-spring-green'>Game Rules</p>
                     <ul className='flex flex-col gap-3 ml-2 mt-2 font-roboto'>
                         <li className='flex items-center'>
-                            <img src='/dice-five.svg' className='h-12 w-12 mr-3 place-self-start' />
+                            <img src='/dice-five.svg' className='h-12 w-12 mr-3 place-self-start rounded-lg' />
                             <div className='flex flex-col'>
                                 <p>1</p>
                                 <p className='text-dark-spring-green'>Each player rolls five dice and keeps them hidden from others. Players take turns making bids about the results of all the dice, such as how many fives there are.</p>
                             </div>
                         </li>
                         <li className='flex items-center'>
-                            <img src='/loop.svg' className='h-12 w-12 mr-3 place-self-start' />
+                            <img src='/loop.svg' className='h-12 w-12 mr-3 place-self-start rounded-lg' />
                             <div>
                                 <p>2</p>
                                 <p className='text-dark-spring-green'>When a player thinks the last bid is a lie, they can challenge it. If the bid was true, the challenger loses a die. If it was a lie, the bidder loses a die.</p>
                             </div>
                         </li>
                         <li className='flex items-center'>
-                            <img src='/trophy.svg' className='h-12 w-12 mr-3 place-self-start' />
+                            <img src='/trophy.svg' className='h-12 w-12 mr-3 place-self-start rounded-lg' />
                             <div>
                                 <p>3</p>
                                 <p className='text-dark-spring-green'>The game continues until only one player has dice left. That player wins the game.</p>
                             </div>
                         </li>
                         <li className='flex items-center'>
-                            <img src='/joker.svg' className='h-12 w-12 mr-3 place-self-start' />
+                            <img src='/joker.svg' className='h-12 w-12 mr-3 place-self-start rounded-lg' />
                             <div>
-                                <p>3</p>
+                                <p>4</p>
                                 <p className='text-dark-spring-green'>The number 1 acts as a joker, meaning it can be used as any number.</p>
                             </div>
                         </li>
@@ -125,17 +125,17 @@ const HomePage: React.FC<HomePageProps> = ({ isAdmin }: { isAdmin: boolean }) =>
                 <p className='text-pakistan-green text-shadow-sm shadow-dark-spring-green'>How to play</p>
                 <ul className='flex flex-col gap-3 ml-2 mt-2'>
                     <li className='flex items-center'>
-                        <img src='/dice-five.svg' className='h-10 w-10 mr-2' />
+                        <img src='/dice-five.svg' className='h-10 w-10 mr-2 rounded-lg' />
                         <p>1. Roll the dice</p>
                     </li>
                     <li className='flex items-center'>
-                        <img src='/megaphone.svg' className='h-10 w-10 mr-2' />
+                        <img src='/megaphone.svg' className='h-10 w-10 mr-2 rounded-lg' />
                         <p>2. Make a bid</p></li>
                     <li className='flex items-center'>
-                        <img src='/search-magnify-glass.svg' className='h-10 w-10 mr-2' />
+                        <img src='/search-magnify-glass.svg' className='h-10 w-10 mr-2 rounded-lg' />
                         <p>3. Call a bluff</p></li>
                     <li className='flex items-center'>
-                        <img src='/trophy.svg' className='h-10 w-10 mr-2' />
+                        <img src='/trophy.svg' className='h-10 w-10 mr-2 rounded-lg' />
                         <p>4. Win the game</p></li>
                 </ul>
             </div>
