@@ -49,7 +49,7 @@ const GamePage: React.FC = () => {
     { title: 'Score', description: 'Here you can see your score.', highlight: 'score' },
     { title: 'Connection status', description: 'Here you can see your connection status.', highlight: 'status' },
     { title: 'Messages', description: 'Here you can see the gameplay.', highlight: 'messages' },
-    { title: 'Dices', description: 'Here you can see your dices.', highlight: 'dice' },
+    { title: 'Dices', description: 'Here you can see your dices. The number 1 is also a joker so it can be used as any number.', highlight: 'dice' },
     { title: 'Action', description: 'Here you can make your choice of either making a bid or challenging the opponent. When making a bid make sure that you choose the number of dices first and then the face.', highlight: 'answer-buttons' },
   ];
 
