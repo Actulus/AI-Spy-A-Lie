@@ -117,27 +117,39 @@ const HomePage: React.FC<HomePageProps> = ({ isAdmin }: { isAdmin: boolean }) =>
                 </div>
                 <ul className='flex flex-col gap-3 mt-2'>
                     {TopPlayers.slice(0, 10).map((player, index) => (
-                        <StatisticsPlayer key={index} name={player.name ? player.name : "Player"} score={player.score} profile={player.profile ? player.profile :  "https://ui-avatars.com/api/?name="+player.name} />
+                        <StatisticsPlayer key={index} name={player.name ? player.name : "Player"} score={player.score} profile={player.profile ? player.profile : "https://ui-avatars.com/api/?name=" + player.name} />
                     ))}
                 </ul>
             </div>
-            <div className='bg-spring-green rounded-lg font-keania-one w-full h-fit p-5 flex flex-col justify-between col-start-1 md:row-start-2 md:col-span-2'>
-                <p className='text-pakistan-green text-shadow-sm shadow-dark-spring-green'>How to play</p>
-                <ul className='flex flex-col gap-3 ml-2 mt-2'>
-                    <li className='flex items-center'>
-                        <img src='/dice-five.svg' className='h-10 w-10 mr-2 rounded-lg' />
-                        <p>1. Roll the dice</p>
-                    </li>
-                    <li className='flex items-center'>
-                        <img src='/megaphone.svg' className='h-10 w-10 mr-2 rounded-lg' />
-                        <p>2. Make a bid</p></li>
-                    <li className='flex items-center'>
-                        <img src='/search-magnify-glass.svg' className='h-10 w-10 mr-2 rounded-lg' />
-                        <p>3. Call a bluff</p></li>
-                    <li className='flex items-center'>
-                        <img src='/trophy.svg' className='h-10 w-10 mr-2 rounded-lg' />
-                        <p>4. Win the game</p></li>
-                </ul>
+            <div className='bg-spring-green rounded-lg font-keania-one w-full h-fit p-5 flex flex-col md:flex-row justify-between col-start-1 md:row-start-2 md:col-span-2'>
+                <div className='mb-2'>
+                    <p className='text-pakistan-green text-shadow-sm shadow-dark-spring-green'>How to play</p>
+                    <ul className='flex flex-col gap-3 ml-2 mt-2'>
+                        <li className='flex items-center'>
+                            <img src='/dice-five.svg' className='h-10 w-10 mr-2 rounded-lg' />
+                            <p>1. Roll the dice</p>
+                        </li>
+                        <li className='flex items-center'>
+                            <img src='/megaphone.svg' className='h-10 w-10 mr-2 rounded-lg' />
+                            <p>2. Make a bid</p></li>
+                        <li className='flex items-center'>
+                            <img src='/search-magnify-glass.svg' className='h-10 w-10 mr-2 rounded-lg' />
+                            <p>3. Call a bluff</p></li>
+                        <li className='flex items-center'>
+                            <img src='/trophy.svg' className='h-10 w-10 mr-2 rounded-lg' />
+                            <p>4. Win the game</p></li>
+                    </ul>
+                </div>
+                <div>
+                    <iframe className='w-fit h-fit aspect-video'
+                            src="https://www.youtube.com/embed/wl4QocM3xxo?si=tTlUvYoMTFtRzTTY" 
+                            title="Liar's Dice Tutorial" 
+                            frameBorder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            referrerPolicy="strict-origin-when-cross-origin" 
+                            allowFullScreen>
+                    </iframe>
+                </div>
             </div>
         </div>
     )
