@@ -15,6 +15,88 @@ interface StatisticsData {
     player_activity: Record<string, number>;
 }
 
+const getDayOfWeek = dateStr => {
+    const date = new Date(dateStr);
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[date.getUTCDay()];
+};
+
+const MyResponsiveBar = ({ data, keys, indexBy, xLegend, yLegend }) => {
+    console.log('Bar chart data:', data); // Log the data being passed to the component
+    return (
+        <ResponsiveBar
+            data={data}
+            keys={keys}
+            indexBy={indexBy}
+            margin={{ top: 50, right: 130, bottom: 50, left: 60 }}
+            padding={0.3}
+            valueScale={{ type: 'linear' }}
+            indexScale={{ type: 'band', round: true }}
+            colors={{ scheme: 'pink_yellowGreen'}}
+            groupMode='grouped'
+            borderColor={{
+                from: 'color',
+                modifiers: [
+                    ['darker', 1.6]
+                ]
+            }}
+            axisTop={null}
+            axisRight={null}
+            axisBottom={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: xLegend,
+                legendPosition: 'middle',
+                legendOffset: 32
+            }}
+            axisLeft={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: yLegend,
+                legendPosition: 'middle',
+                legendOffset: -40
+            }}
+            labelSkipWidth={12}
+            labelSkipHeight={12}
+            labelTextColor={{
+                from: 'color',
+                modifiers: [
+                    ['darker', 1.6]
+                ]
+            }}
+            legends={[
+                {
+                    dataFrom: 'keys',
+                    anchor: 'bottom-right',
+                    direction: 'column',
+                    justify: false,
+                    translateX: 120,
+                    translateY: 0,
+                    itemsSpacing: 2,
+                    itemWidth: 100,
+                    itemHeight: 20,
+                    itemDirection: 'left-to-right',
+                    itemOpacity: 0.85,
+                    symbolSize: 20,
+                    effects: [
+                        {
+                            on: 'hover',
+                            style: {
+                                itemOpacity: 1
+                            }
+                        }
+                    ]
+                }
+            ]}
+            role="application"
+            ariaLabel="Nivo bar chart"
+            barAriaLabel={e => e.id + ": " + e.formattedValue + " on " + indexBy + ": " + e.indexValue}
+        />
+    );
+};
+
 const Statistics = () => {
     const [data, setData] = useState<StatisticsData | null>(null);
     const kinde_uuid = useKindeAuth().user?.id;
@@ -33,14 +115,16 @@ const Statistics = () => {
 
     if (!data) return <Loading />;
 
-    const matchesPerDayData = Object.keys(data.matches_per_day).map(date => ({
-        x: date,
-        y: data.matches_per_day[date]
+    const matchesPerDayArray = Object.keys(data.matches_per_day).map(date => ({
+        date,
+        day: getDayOfWeek(date),
+        matches: data.matches_per_day[date]
     }));
 
     const averageUserScoreData = Object.keys(data.average_user_score).map(date => ({
-        x: date,
-        y: data.average_user_score[date]
+        date,
+        day: getDayOfWeek(date),
+        averageScore: data.average_user_score[date]
     }));
 
     const aiPerformanceData = Object.keys(data.ai_performance).map(aiType => ({
@@ -79,54 +163,18 @@ const Statistics = () => {
     }));
 
     return (
-        <div className='bg-malachite'>
+        <div className='bg-nyanza'>
             <h2 className='text-xl mt-5 font-bold text-center'>Matches Per Day</h2>
             <div style={{ height: 400 }}>
-                <ResponsiveLine
-                    data={[{ id: 'matches', data: matchesPerDayData }]}
-                    margin={{ top: 50, right: 110, bottom: 50, left: 60 }}
-                    xScale={{ type: 'point' }}
-                    yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: true, reverse: false }}
-                    axisTop={null}
-                    axisRight={null}
-                    axisBottom={{
-                        legend: 'Date',
-                        legendOffset: 36,
-                        legendPosition: 'middle'
-                    }}
-                    axisLeft={{
-                        legend: 'Matches',
-                        legendOffset: -40,
-                        legendPosition: 'middle'
-                    }}
-                    colors={{ scheme: 'set1' }}
-                />
+                <MyResponsiveBar data={matchesPerDayArray} keys={['matches']} indexBy="date" xLegend="Date" yLegend="Matches" />
             </div>
 
             <h2 className='text-xl mt-5 font-bold text-center'>Average User Score Over Past Month</h2>
             <div style={{ height: 400 }}>
-                <ResponsiveLine
-                    data={[{ id: 'average_score', data: averageUserScoreData }]}
-                    margin={{ top: 50, right: 110, bottom: 50, left: 60 }}
-                    xScale={{ type: 'point' }}
-                    yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: true, reverse: false }}
-                    axisTop={null}
-                    axisRight={null}
-                    axisBottom={{
-                        legend: 'Date',
-                        legendOffset: 36,
-                        legendPosition: 'middle'
-                    }}
-                    axisLeft={{
-                        legend: 'Average Score',
-                        legendOffset: -40,
-                        legendPosition: 'middle'
-                    }}
-                    colors={{ scheme: 'set1' }}
-                />
+                <MyResponsiveBar data={averageUserScoreData} keys={['averageScore']} indexBy="date" xLegend="Date" yLegend="Average Score" />
             </div>
 
-            <h2 className='text-xl mt-5 font-bold text-center'>AI Performance</h2>
+            <h2 className='text-xl mt-5 font-bold text-center'>Matches Played Per AI</h2>
             <div style={{ height: 400 }}>
                 <ResponsivePie
                     data={aiPerformanceData}
@@ -143,7 +191,7 @@ const Statistics = () => {
                     arcLinkLabelsColor={{ from: 'color' }}
                     arcLabelsSkipAngle={10}
                     arcLabelsTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
-                    colors={{ scheme: 'set1' }}
+                    colors={{ scheme: 'pink_yellowGreen' }}
                 />
             </div>
 
@@ -167,7 +215,7 @@ const Statistics = () => {
                         legendPosition: 'middle',
                         legendOffset: -40
                     }}
-                    colors={{ scheme: 'set1' }}
+                    colors={{ scheme: 'pink_yellowGreen' }}
                 />
             </div>
 
@@ -191,7 +239,7 @@ const Statistics = () => {
                         legendPosition: 'middle',
                         legendOffset: -40
                     }}
-                    colors={{ scheme: 'set1' }}
+                    colors={{ scheme: 'pink_yellowGreen' }}
                 />
             </div>
 
@@ -212,7 +260,7 @@ const Statistics = () => {
                     arcLinkLabelsColor={{ from: 'color' }}
                     arcLabelsSkipAngle={10}
                     arcLabelsTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
-                    colors={{ scheme: 'set1' }}
+                    colors={{ scheme: 'pink_yellowGreen' }}
                 />
             </div>
 
@@ -235,7 +283,7 @@ const Statistics = () => {
                         legendOffset: -40,
                         legendPosition: 'middle'
                     }}
-                    colors={{ scheme: 'set1' }}
+                    colors={{ scheme: 'pink_yellowGreen' }}
                 />
             </div>
         </div>

@@ -67,7 +67,7 @@ const GamePage: React.FC = () => {
     'answer-buttons': answerButtonsRef,
   };
 
-  const handleGameOver = useCallback(({ roomSocketId, kindeUUID, userScore, AIBotType, AIScore   }: {
+  const handleGameOver = useCallback(async ({ roomSocketId, kindeUUID, userScore, AIBotType, AIScore   }: {
     roomSocketId: string,
     kindeUUID: string,
     userScore: number,
@@ -76,7 +76,9 @@ const GamePage: React.FC = () => {
   }) => {
     setIsGameOver(true);
 
-    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/match`, {
+    console.log('Game Over, AI score:', AIScore, 'User score:', userScore);
+
+    await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/match`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -126,9 +128,12 @@ const GamePage: React.FC = () => {
       socketInstance.on('game_update', (data: GameState) => {
         setGameState(data);
 
+
+        console.log(data.dice_count[1], data.dice_count[2])
         if (data.dice_count[1] === 0 || data.dice_count[2] === 0) {
           const winner = data.dice_count[1] === 0 ? data.player_names[2] : data.player_names[1];
           setWinner(winner);
+          console.log('Game Over, AI score:', data.scores[2], 'User score:', data.scores[1], 'Winner:', winner);
           handleGameOver({
             roomSocketId: socketInstance.id!,
             kindeUUID: user!.id!,
