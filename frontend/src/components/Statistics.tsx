@@ -22,7 +22,7 @@ const getDayOfWeek = (dateStr: string) => {
 };
 
 const MyResponsiveBar = ({ data, keys, indexBy, xLegend, yLegend } : {
-    data: { date: string, day: string, matches: number }[],
+    data: { day: string, matches: number }[],
     keys: string[],
     indexBy: string,
     xLegend: string,
@@ -104,7 +104,7 @@ const MyResponsiveBar = ({ data, keys, indexBy, xLegend, yLegend } : {
 };
 
 const MyResponsiveBarAverageScore = ({ data, keys, indexBy, xLegend, yLegend } : {
-    data: { date: string, day: string, averageScore: number }[],
+    data: { date: string, averageScore: number }[],
     keys: string[],
     indexBy: string,
     xLegend: string,
@@ -203,15 +203,22 @@ const Statistics = () => {
 
     if (!data) return <Loading />;
 
-    const matchesPerDayArray = Object.keys(data.matches_per_day).map(date => ({
-        date,
-        day: getDayOfWeek(date),
-        matches: data.matches_per_day[date]
+    const matchesPerDay = Object.keys(data.matches_per_day).reduce((acc, date) => {
+        const day = getDayOfWeek(date);
+        if (!acc[day]) {
+            acc[day] = 0;
+        }
+        acc[day] += data.matches_per_day[date];
+        return acc;
+    }, {} as Record<string, number>);
+
+    const matchesPerDayArray = Object.keys(matchesPerDay).map(day => ({
+        day,
+        matches: matchesPerDay[day]
     }));
 
     const averageUserScoreData = Object.keys(data.average_user_score).map(date => ({
         date,
-        day: getDayOfWeek(date),
         averageScore: data.average_user_score[date]
     }));
 
