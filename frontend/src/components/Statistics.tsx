@@ -15,13 +15,101 @@ interface StatisticsData {
     player_activity: Record<string, number>;
 }
 
-const getDayOfWeek = dateStr => {
+const getDayOfWeek = (dateStr: string) => {
     const date = new Date(dateStr);
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[date.getUTCDay()];
 };
 
-const MyResponsiveBar = ({ data, keys, indexBy, xLegend, yLegend }) => {
+const MyResponsiveBar = ({ data, keys, indexBy, xLegend, yLegend } : {
+    data: { date: string, day: string, matches: number }[],
+    keys: string[],
+    indexBy: string,
+    xLegend: string,
+    yLegend: string
+}) => {
+    console.log('Bar chart data:', data); // Log the data being passed to the component
+    return (
+        <ResponsiveBar
+            data={data}
+            keys={keys}
+            indexBy={indexBy}
+            margin={{ top: 50, right: 130, bottom: 50, left: 60 }}
+            padding={0.3}
+            valueScale={{ type: 'linear' }}
+            indexScale={{ type: 'band', round: true }}
+            colors={{ scheme: 'pink_yellowGreen'}}
+            groupMode='grouped'
+            borderColor={{
+                from: 'color',
+                modifiers: [
+                    ['darker', 1.6]
+                ]
+            }}
+            axisTop={null}
+            axisRight={null}
+            axisBottom={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: xLegend,
+                legendPosition: 'middle',
+                legendOffset: 32
+            }}
+            axisLeft={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: yLegend,
+                legendPosition: 'middle',
+                legendOffset: -40
+            }}
+            labelSkipWidth={12}
+            labelSkipHeight={12}
+            labelTextColor={{
+                from: 'color',
+                modifiers: [
+                    ['darker', 1.6]
+                ]
+            }}
+            legends={[
+                {
+                    dataFrom: 'keys',
+                    anchor: 'bottom-right',
+                    direction: 'column',
+                    justify: false,
+                    translateX: 120,
+                    translateY: 0,
+                    itemsSpacing: 2,
+                    itemWidth: 100,
+                    itemHeight: 20,
+                    itemDirection: 'left-to-right',
+                    itemOpacity: 0.85,
+                    symbolSize: 20,
+                    effects: [
+                        {
+                            on: 'hover',
+                            style: {
+                                itemOpacity: 1
+                            }
+                        }
+                    ]
+                }
+            ]}
+            role="application"
+            ariaLabel="Nivo bar chart"
+            barAriaLabel={e => e.id + ": " + e.formattedValue + " on " + indexBy + ": " + e.indexValue}
+        />
+    );
+};
+
+const MyResponsiveBarAverageScore = ({ data, keys, indexBy, xLegend, yLegend } : {
+    data: { date: string, day: string, averageScore: number }[],
+    keys: string[],
+    indexBy: string,
+    xLegend: string,
+    yLegend: string
+}) => {
     console.log('Bar chart data:', data); // Log the data being passed to the component
     return (
         <ResponsiveBar
@@ -171,7 +259,7 @@ const Statistics = () => {
 
             <h2 className='text-xl mt-5 font-bold text-center'>Average User Score Over Past Month</h2>
             <div style={{ height: 400 }}>
-                <MyResponsiveBar data={averageUserScoreData} keys={['averageScore']} indexBy="date" xLegend="Date" yLegend="Average Score" />
+                <MyResponsiveBarAverageScore data={averageUserScoreData} keys={['averageScore']} indexBy="date" xLegend="Date" yLegend="Average Score" />
             </div>
 
             <h2 className='text-xl mt-5 font-bold text-center'>Matches Played Per AI</h2>
