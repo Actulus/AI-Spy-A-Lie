@@ -185,7 +185,7 @@ def update_user_total_score(kinde_uuid: str, score: int, db: Session = Depends(g
     return db_user
 
 @router.post("/match", response_model=MatchResponse)
-def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):   
+async def create_match(match_data: MatchCreate, db: Session = Depends(get_db)):   
     # Create a new match with the current date and socket ID
     new_match = Match(
         match_date=datetime.now(),

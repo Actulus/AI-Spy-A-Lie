@@ -57,7 +57,7 @@ class LiarDiceGame:
     
     def adjust_scores(self, winner, loser):
         self.scores[winner] += 100
-        self.scores[loser] = max(self.scores[loser] - 100, 0)
+        self.scores[loser] = max(0, self.scores[loser] - 100)
 
 
     def challenge(self, challenger):
@@ -123,7 +123,7 @@ class LiarDiceGame:
         return quantity, face_value
     
     def get_dice_counts(self):
-        return list(self.dice_count.values())
+        return self.dice_count
     
     def step(self, action):
         action_type, quantity, face_value = action
@@ -147,6 +147,7 @@ class LiarDiceGame:
 
 
     def get_game_state(self):
+        print(self.get_dice_counts())
         return {
             "dice_count": self.get_dice_counts(),
             "players": self.players,
