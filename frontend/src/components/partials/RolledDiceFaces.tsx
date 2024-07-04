@@ -1,9 +1,9 @@
 import { forwardRef, useEffect, useState } from 'react';
 
-const RolledDiceFaces = forwardRef<HTMLDivElement, { user: string; rolledDice: string[]; }>(
-  ({ user, rolledDice }, ref) => {
+const RolledDiceFaces = forwardRef<HTMLDivElement, { user: string; rolledDice: string[]; last_action_was_challenge: boolean|undefined }>(
+  ({ user, rolledDice, last_action_was_challenge }, ref) => {
     const [diceWithAnimation, setDiceWithAnimation] = useState(
-      rolledDice.map((face, index) => ({ face, key: index, animation: false }))
+      rolledDice.map((face, index) => ({ face, key: index, animation: last_action_was_challenge }))
     );
 
     useEffect(() => {
@@ -11,7 +11,7 @@ const RolledDiceFaces = forwardRef<HTMLDivElement, { user: string; rolledDice: s
       setDiceWithAnimation(rolledDice.map((face, index) => ({
         face,
         key: index,
-        animation: true,
+        animation: last_action_was_challenge,
       })));
 
       // Remove the animation class after the animation duration
@@ -24,7 +24,7 @@ const RolledDiceFaces = forwardRef<HTMLDivElement, { user: string; rolledDice: s
       }, 1000); // match the animation duration
 
       return () => clearTimeout(timer);
-    }, [rolledDice]);
+    }, [rolledDice, last_action_was_challenge]);
 
     return (
       <div ref={ref} className="flex flex-col items-center">
@@ -33,11 +33,9 @@ const RolledDiceFaces = forwardRef<HTMLDivElement, { user: string; rolledDice: s
           {diceWithAnimation.map(({ face, key, animation }) => (
             <div
               key={key}
-              className={`flex text-2xl m-2 p-2 text-center justify-center items-center bg-nyanza text-black rounded-lg ${
-                animation ? 'animate-spin' : ''
-              }`}
+              className={`flex text-2xl m-2 p-2 text-center justify-center items-center bg-nyanza text-black rounded-lg`}
             >
-              {face}
+              <p className={`text-4xl ${animation ? 'animate-spin' : ''}`}>{face}</p>
             </div>
           ))}
         </div>

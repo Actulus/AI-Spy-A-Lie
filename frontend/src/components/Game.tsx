@@ -307,6 +307,7 @@ const GamePage: React.FC = () => {
           ref={diceRef}
           user="Your"
           rolledDice={gameState ? gameState.players[1].map(die => diceFaces[die - 1]) : []}
+          last_action_was_challenge={gameState?.last_action_was_challenge}
         />
         <AnswerButtons
           ref={answerButtonsRef}

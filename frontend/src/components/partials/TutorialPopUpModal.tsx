@@ -83,13 +83,13 @@ const TutorialPopUpModal: React.FC<TutorialPopUpModalProps> = ({
             </svg>
           </button>
         </div>
-        <p className="mb-6">{steps[currentStep].description}</p>
+        <p className="mb-6 text-lg">{steps[currentStep].description}</p>
         <div className={`flex ${!isFirstStep && !isLastStep ? 'justify-between' : ''} w-full`}>
           {!isFirstStep && (
             <button
               onClick={handlePreviousStep}
               disabled={isFirstStep}
-              className="bg-spring-green px-4 py-2 rounded-lg"
+              className="bg-spring-green px-4 py-2 rounded-lg text-lg"
             >
               Previous
             </button>
@@ -98,7 +98,7 @@ const TutorialPopUpModal: React.FC<TutorialPopUpModalProps> = ({
             <button
               onClick={handleNextStep}
               disabled={isLastStep}
-              className="bg-spring-green px-4 py-2 rounded-lg ml-auto"
+              className="bg-spring-green px-4 py-2 rounded-lg ml-auto text-lg"
             >
               Next
             </button>
