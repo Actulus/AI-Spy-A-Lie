@@ -112,7 +112,7 @@ class LiarDiceGame:
         return None
 
     def random_bid(self):
-        total_dice = 10
+        total_dice = self.dice_count[self.current_player]
         
         min_quantity = self.current_bid[0] + 1
         if min_quantity > total_dice:

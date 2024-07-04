@@ -11,6 +11,7 @@ from load_agents import load_agents
 from liars_dice_game_logic import LiarDiceGame
 import sys
 import os
+import math
 
 game_counter = 0
 SAVE_INTERVAL = 10 
@@ -325,6 +326,47 @@ def is_valid_action(action_type, quantity, face_value, state):
             return False
     return True
 
+def binomial_probability(n, k, p):
+    # Binomial coefficient
+    coeff = math.comb(n, k)
+    return coeff * (p ** k) * ((1 - p) ** (n - k))
+
+def calculate_challenge_probability(game, current_bid):
+    total_dice = game.dice_count[1] + game.dice_count[2]
+    current_bid_quantity, current_bid_face_value = current_bid
+
+    # Calculate the combined probability of a face value considering wilds (1s)
+    face_probability = 1 / 6
+    wild_probability = 1 / 6
+    combined_probability = face_probability + wild_probability
+
+    probability = 0
+    for k in range(current_bid_quantity, total_dice + 1):
+        probability += binomial_probability(total_dice, k, combined_probability)
+
+    return 1 - probability  # Probability of the bid being false
+
+def determine_next_bid(game):
+    current_quantity, current_face_value = game.current_bid
+    total_dice = sum(game.get_dice_counts().values())
+
+    # Adjust the bid to be slightly braver by adding a margin
+    if current_face_value < 6:
+        new_quantity = current_quantity
+        new_face_value = current_face_value + 1
+    else:
+        new_quantity = current_quantity + 1
+        new_face_value = 1
+
+    # Ensure the bid quantity is valid and not zero
+    if new_quantity == 0:
+        new_quantity = 1
+
+    # Add a small random factor to make the AI braver
+    if random.random() < 0.5:  # 50% chance to increase the quantity by 1
+        new_quantity += 1
+
+    return new_quantity, new_face_value
 
 def handle_tutorial_mode(game):
     if game.is_game_over():
@@ -334,14 +376,19 @@ def handle_tutorial_mode(game):
     if game.last_action_was_challenge or game.current_bid == (1, 1):
         action = "bid"  # Force bid after challenge or for the first move
     else:
-        action = random.choice(["bid", "challenge"])
+        bid_probability = calculate_challenge_probability(game, game.current_bid)
+        if bid_probability > 0.7:  # 70% probability of being false
+            action = "challenge"
+        else:
+            action = "bid"
 
-    # if current bid is 10 6s, challenge
-    if game.current_bid[0] == 10:
+    # If current bid is extreme, challenge
+    total_dice = sum(game.get_dice_counts().values())
+    if game.current_bid[0] >= total_dice:
         action = "challenge"
 
     if action == "bid":
-        quantity, face_value = game.random_bid()
+        quantity, face_value = determine_next_bid(game)
         game.make_bid(2, quantity, face_value)  # player 2 is the AI
         return f"Bid: {quantity} {face_value}s."
     else:
