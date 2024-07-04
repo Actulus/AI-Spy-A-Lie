@@ -18,7 +18,24 @@ interface StatisticsData {
 const getDayOfWeek = (dateStr: string) => {
     const date = new Date(dateStr);
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[date.getUTCDay()];
+    return days[date.getDay()];
+};
+
+const aggregateMatchesByDayOfWeek = (matchesPerDay: Record<string, number>) => {
+    const matchesByDayOfWeek: { [key: string]: number } = {};
+
+    Object.keys(matchesPerDay).forEach(date => {
+        const dayOfWeek = getDayOfWeek(date);
+        if (!matchesByDayOfWeek[dayOfWeek]) {
+            matchesByDayOfWeek[dayOfWeek] = 0;
+        }
+        matchesByDayOfWeek[dayOfWeek] += matchesPerDay[date];
+    });
+
+    return Object.keys(matchesByDayOfWeek).map(day => ({
+        day,
+        matches: matchesByDayOfWeek[day]
+    }));
 };
 
 const MyResponsiveBar = ({ data, keys, indexBy, xLegend, yLegend } : {
@@ -28,7 +45,6 @@ const MyResponsiveBar = ({ data, keys, indexBy, xLegend, yLegend } : {
     xLegend: string,
     yLegend: string
 }) => {
-    console.log('Bar chart data:', data); // Log the data being passed to the component
     return (
         <ResponsiveBar
             data={data}
@@ -203,19 +219,7 @@ const Statistics = () => {
 
     if (!data) return <Loading />;
 
-    const matchesPerDay = Object.keys(data.matches_per_day).reduce((acc, date) => {
-        const day = getDayOfWeek(date);
-        if (!acc[day]) {
-            acc[day] = 0;
-        }
-        acc[day] += data.matches_per_day[date];
-        return acc;
-    }, {} as Record<string, number>);
-
-    const matchesPerDayArray = Object.keys(matchesPerDay).map(day => ({
-        day,
-        matches: matchesPerDay[day]
-    }));
+    const matchesPerDayOfWeek = aggregateMatchesByDayOfWeek(data.matches_per_day);
 
     const averageUserScoreData = Object.keys(data.average_user_score).map(date => ({
         date,
@@ -261,7 +265,7 @@ const Statistics = () => {
         <div className='bg-nyanza'>
             <h2 className='text-xl mt-5 font-bold text-center'>Matches Per Day</h2>
             <div style={{ height: 400 }}>
-                <MyResponsiveBar data={matchesPerDayArray} keys={['matches']} indexBy="date" xLegend="Date" yLegend="Matches" />
+                <MyResponsiveBar data={matchesPerDayOfWeek} keys={['matches']} indexBy="day" xLegend="Day of the Week" yLegend="Matches" />
             </div>
 
             <h2 className='text-xl mt-5 font-bold text-center'>Average User Score Over Past Month</h2>
