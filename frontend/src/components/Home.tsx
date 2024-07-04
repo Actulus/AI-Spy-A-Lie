@@ -124,7 +124,7 @@ const HomePage: React.FC<HomePageProps> = ({ isAdmin }: { isAdmin: boolean }) =>
             <div className='bg-spring-green rounded-lg font-keania-one w-full h-fit p-5 flex flex-col md:flex-row justify-between col-start-1 md:row-start-2 md:col-span-2'>
                 <div className='mb-2'>
                     <p className='text-pakistan-green text-shadow-sm shadow-dark-spring-green'>How to play</p>
-                    <ul className='flex flex-col gap-3 ml-2 mt-2'>
+                    <ul className='flex flex-col gap-3 ml-2 mt-2 font-roboto'>
                         <li className='flex items-center'>
                             <img src='/dice-five.svg' className='h-10 w-10 mr-2 rounded-lg' />
                             <p>1. Roll the dice</p>
